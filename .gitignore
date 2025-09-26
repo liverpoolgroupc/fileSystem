@@ -1,0 +1,21 @@
+# IDE / 环境
+.idea/
+.vscode/
+.venv/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 测试/工具缓存（可选）
+.pytest_cache/
+.mypy_cache/
+.coverage
+dist/
+build/
+
+# macOS (可选)
+.DS_Store
+
