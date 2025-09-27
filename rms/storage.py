@@ -8,7 +8,6 @@ from typing import Dict, List
 
 log = logging.getLogger(__name__)
 
-
 class JsonlStorage:
     """
     简单 JSONL 存储。提供：
@@ -83,7 +82,9 @@ class JsonlStorage:
             f.setdefault("Type", "flight")
             if "ID" in f:
                 try:
-                    next_fid = max(next_fid, int(f["ID"]) + 1)
+                    n = int(f["ID"])
+                    if n + 1 > next_fid:
+                        next_fid = n + 1
                 except Exception:
                     pass
 

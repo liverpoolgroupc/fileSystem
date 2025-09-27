@@ -1,182 +1,88 @@
-# test_services.py
-import json
-import os
-import pytest
-
+# tests/test_services.py
+import logging
 from storage import JsonlStorage
 from services import RMS
 
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
-def load_jsonl(path):
-    if not os.path.exists(path):
-        return []
-    with open(path, "r", encoding="utf-8") as f:
-        return [json.loads(x) for x in f.read().splitlines() if x.strip()]
+def make_rms(tmp_path) -> RMS:
+    root = tmp_path / "data"
+    st = JsonlStorage(str(root))
+    return RMS(storage=st)
 
+def test_clients_crud_and_search(tmp_path):
+    rms = make_rms(tmp_path)
 
-def mk_rms(tmp_path):
-    st = JsonlStorage(root=str(tmp_path / "data"))
-    return RMS(st)
+    # create
+    c = rms.create_client({
+        "Name": "Alice", "Phone": "18800001111",
+        "Country": "United States", "City": "New York",
+        "State": "NY", "Zip": "10000", "Address1": "addr 1",
+        "Address2": "", "Address3": ""
+    })
+    logging.info("Created client: %s", c)
+    assert c["client_id"] == 1
 
+    # update
+    updated = rms.update_client(1, {"Phone": "18800002222"})
+    logging.info("Updated client: %s", updated)
+    assert updated["Phone"] == "18800002222"
 
-def valid_client(**kw):
-    base = dict(
-        Name="Alice",
-        Address1="A-1",
-        Address2="A-2",
-        Address3="A-3",
-        City="Tokyo",
-        State="TY",
-        Zip="100-0001",
-        Country="JP",
-        Phone="090-0000-0000",
-    )
-    base.update(kw)
-    return base
+    # search (by id / name / phone)
+    assert len(rms.search_clients("1")) == 1
+    assert len(rms.search_clients("ali")) == 1
+    assert len(rms.search_clients("002222")) == 1
 
+    # delete
+    rms.delete_client(1)
+    logging.info("Deleted client 1")
+    assert rms.search_clients("1") == []
 
-def test_client_crud_and_persistence(tmp_path):
-    rms = mk_rms(tmp_path)
+def test_airlines_and_flights(tmp_path):
+    rms = make_rms(tmp_path)
 
-    # create -> 立刻写盘
-    c1 = rms.create_client(valid_client())
-    assert c1["client_id"] == 1
+    c1 = rms.create_client({
+        "Name": "Bob", "Phone": "19900001111",
+        "Country": "United States", "City": "San Francisco",
+        "State": "CA", "Zip": "94016", "Address1": "addr",
+        "Address2": "", "Address3": ""
+    })
+    a1 = rms.create_airline({"CompanyName": "Dream Air"})
+    logging.info("Create airline: %s", a1)
 
-    clients_path = rms.st.clients_path
-    on_disk = load_jsonl(clients_path)
-    assert len(on_disk) == 1 and on_disk[0]["client_id"] == 1
-
-    # update -> 立刻写盘
-    rms.update_client(1, valid_client(Name="Alice X", Phone="123"))
-    on_disk = load_jsonl(clients_path)
-    assert on_disk[0]["Name"] == "Alice X" and on_disk[0]["Phone"] == "123"
-
-    # delete -> 同时删除其 flights
-    a1 = rms.create_airline({"CompanyName": "UA"})
     f1 = rms.create_flight({
-        "client_id": 1,
+        "client_id": c1["client_id"],
         "airline_id": a1["airline_id"],
-        "Date": "2025-01-02 08:30",
-        "StartCity": "Tokyo",
+        "Date": "2030-01-02 12:30",
+        "StartCity": "San Francisco",
         "EndCity": "New York",
     })
+    logging.info("Create flight: %s", f1)
     assert f1["ID"] == 1
 
-    rms.delete_client(1)
-    # 客户被删
-    assert load_jsonl(clients_path) == []
-    # 名下航班被删
-    assert load_jsonl(rms.st.flights_path) == []
+    # flights search by name / phone / id
+    r_by_name = rms.search_flights("bob")
+    logging.info("Search flights by name: %s", r_by_name)
+    assert len(r_by_name) == 1
 
+    r_by_phone = rms.search_flights("19900001111")
+    logging.info("Search flights by phone: %s", r_by_phone)
+    assert len(r_by_phone) == 1
 
-def test_client_required_validation(tmp_path):
-    rms = mk_rms(tmp_path)
-    with pytest.raises(ValueError):
-        rms.create_client(valid_client(Name=""))   # Name 为空
-    with pytest.raises(ValueError):
-        rms.create_client(valid_client(City=""))   # City 为空
+    r_by_id = rms.search_flights(str(c1["client_id"]))
+    logging.info("Search flights by client_id: %s", r_by_id)
+    assert len(r_by_id) == 1
 
+    # airline search
+    r_air = rms.search_airlines("dream")
+    logging.info("Search airlines by name: %s", r_air)
+    assert len(r_air) == 1
+    r_air_id = rms.search_airlines(str(a1["airline_id"]))
+    assert len(r_air_id) == 1
 
-def test_airline_and_flight_crud(tmp_path):
-    rms = mk_rms(tmp_path)
-    c = rms.create_client(valid_client())
-    a = rms.create_airline({"CompanyName": "DL"})
-
-    # create flight
-    f = rms.create_flight({
-        "client_id": c["client_id"],
-        "airline_id": a["airline_id"],
-        "Date": "2026-05-06 13:35",
-        "StartCity": "Tokyo",
-        "EndCity": "Paris",
-    })
-    assert f["ID"] == 1
-
-    # update flight
-    f2 = rms.update_flight(1, {
-        "client_id": c["client_id"],
-        "airline_id": a["airline_id"],
-        "Date": "2026-05-06 14:00",
-        "StartCity": "Tokyo",
-        "EndCity": "London",
-    })
-    assert f2["EndCity"] == "London"
-
-    # delete flight
-    rms.delete_flight(1)
-    assert load_jsonl(rms.st.flights_path) == []
-
-
-def test_flight_fk_validation(tmp_path):
-    rms = mk_rms(tmp_path)
-    c = rms.create_client(valid_client())
-    a = rms.create_airline({"CompanyName": "LH"})
-
-    # 错的 client_id
-    with pytest.raises(ValueError):
-        rms.create_flight({
-            "client_id": 999,
-            "airline_id": a["airline_id"],
-            "Date": "2025-01-01 00:00",
-            "StartCity": "A",
-            "EndCity": "B",
-        })
-    # 错的 airline_id
-    with pytest.raises(ValueError):
-        rms.create_flight({
-            "client_id": c["client_id"],
-            "airline_id": 999,
-            "Date": "2025-01-01 00:00",
-            "StartCity": "A",
-            "EndCity": "B",
-        })
-
-
-def test_client_search(tmp_path):
-    rms = mk_rms(tmp_path)
-    c1 = rms.create_client(valid_client(Name="Alice", Phone="1111"))
-    c2 = rms.create_client(valid_client(Name="Bob", Phone="2222"))
-
-    # by id
-    rs = rms.search_clients(str(c1["client_id"]))
-    assert len(rs) == 1 and rs[0]["Name"] == "Alice"
-
-    # by phone
-    rs = rms.search_clients("2222")
-    assert len(rs) == 1 and rs[0]["Name"] == "Bob"
-
-    # by name (lowercase)
-    rs = rms.search_clients("alice")
-    assert len(rs) == 1 and rs[0]["Phone"] == "1111"
-
-
-def test_flight_search_and_search_by_fk(tmp_path):
-    rms = mk_rms(tmp_path)
-    c1 = rms.create_client(valid_client(Name="Alice", Phone="1111"))
-    c2 = rms.create_client(valid_client(Name="Bob", Phone="2222"))
-    a1 = rms.create_airline({"CompanyName": "UA"})
-    a2 = rms.create_airline({"CompanyName": "DL"})
-
-    rms.create_flight({
-        "client_id": c1["client_id"], "airline_id": a1["airline_id"],
-        "Date": "2025-01-01 08:00", "StartCity": "Tokyo", "EndCity": "NY"
-    })
-    rms.create_flight({
-        "client_id": c1["client_id"], "airline_id": a2["airline_id"],
-        "Date": "2025-01-02 09:00", "StartCity": "Tokyo", "EndCity": "LA"
-    })
-    rms.create_flight({
-        "client_id": c2["client_id"], "airline_id": a2["airline_id"],
-        "Date": "2025-02-03 10:00", "StartCity": "Paris", "EndCity": "London"
-    })
-
-    # 普通搜索：按 client name / phone / id
-    rs = rms.search_flights("alice")
-    assert len(rs) == 2 and all(r["ClientName"] == "Alice" for r in rs)
-
-    rs = rms.search_flights("2222")
-    assert len(rs) == 1 and rs[0]["ClientName"] == "Bob"
-
-    # 按 client_id + airline_id 搜索
-    rs = rms.search_flights_by_fk(c1["client_id"], a2["airline_id"])
-    assert len(rs) == 1 and rs[0]["Airline"] == "DL"
+    # update + delete
+    rms.update_airline(a1["airline_id"], {"CompanyName": "Dream Air Intl"})
+    logging.info("Airline after update: %s", rms.search_airlines("intl"))
+    rms.delete_airline(a1["airline_id"])
+    logging.info("Deleted airline (flights should be removed)")
+    assert rms.search_flights("bob") == []

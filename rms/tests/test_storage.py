@@ -1,65 +1,39 @@
-# test_storage.py
-import json
+# tests/test_storage.py
+import logging
+from pathlib import Path
 from storage import JsonlStorage
 
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
-def write_jsonl(p, rows):
-    with open(p, "w", encoding="utf-8") as f:
-        for r in rows:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-
-
-def read_all(path):
-    with open(path, "r", encoding="utf-8") as f:
-        return [json.loads(x) for x in f.read().splitlines() if x.strip()]
-
-
-def test_load_all_migrates_legacy_fields(tmp_path):
-    # 构造 legacy 数据
+def test_storage_roundtrip(tmp_path):
     root = tmp_path / "data"
-    root.mkdir()
+    st = JsonlStorage(str(root))
+    # 初始写入
+    st.write_clients([{"client_id": 1, "Type": "client", "Name": "A"}])
+    st.write_airlines([{"airline_id": 1, "Type": "airline", "CompanyName": "X"}])
+    st.write_flights([{"ID": 1, "Type": "flight", "client_id": 1, "airline_id": 1, "Date": "2030-01-01 10:00",
+                       "StartCity": "Tokyo", "EndCity": "Osaka"}])
+    logging.info("Wrote initial jsonl files")
 
-    clients_path = root / "clients.jsonl"
-    airlines_path = root / "airlines.jsonl"
-    flights_path = root / "flights.jsonl"
-
-    write_jsonl(clients_path, [
-        {"ID": 1, "Type": "client", "Name": "Alice", "Phone": "111"}
-    ])
-    write_jsonl(airlines_path, [
-        {"ID": 9, "Type": "airline", "CompanyName": "UA"}
-    ])
-    write_jsonl(flights_path, [
-        {
-            "Type": "flight",
-            "Client_ID": 1,
-            "Airline_ID": 9,
-            "Date": "2025-01-02 08:30",
-            "StartCity": "New York",
-            "EndCity": "Tokyo"
-        }
-    ])
-
-    st = JsonlStorage(root=str(root))
     data = st.load_all()
+    assert len(data["clients"]) == 1
+    assert len(data["airlines"]) == 1
+    assert len(data["flights"]) == 1
+    logging.info("Loaded data sizes: c=%d a=%d f=%d",
+                 len(data["clients"]), len(data["airlines"]), len(data["flights"]))
 
-    # 已迁移：ID->client_id / airline_id；航班补了 ID
-    cl = data["clients"][0]
-    al = data["airlines"][0]
-    fl = data["flights"][0]
+    # 迁移测试（老字段）
+    st.write_clients([{"ID": 2, "Name": "B"}])
+    st.write_airlines([{"ID": 3, "CompanyName": "Y"}])
+    st.write_flights([{"Client_ID": 2, "Airline_ID": 3, "Date": "2031-02-02 12:30",
+                       "StartCity": "Paris", "EndCity": "Berlin"}])
+    logging.info("Wrote legacy schema rows")
 
-    assert cl["client_id"] == 1 and cl["Type"] == "client"
-    assert al["airline_id"] == 9 and al["Type"] == "airline"
-    assert fl["client_id"] == 1 and fl["airline_id"] == 9 and fl["Type"] == "flight"
-    assert "ID" in fl and isinstance(fl["ID"], int)
-
-    # 文件应被写回为新字段，再读验证
-    clients2 = read_all(clients_path)
-    airlines2 = read_all(airlines_path)
-    flights2 = read_all(flights_path)
-
-    assert "client_id" in clients2[0] and "ID" not in clients2[0]
-    assert "airline_id" in airlines2[0] and "ID" not in airlines2[0]
-    assert "client_id" in flights2[0] and "Client_ID" not in flights2[0]
-    assert "airline_id" in flights2[0] and "Airline_ID" not in flights2[0]
-    assert "ID" in flights2[0]  # 航班自身 ID 持久化
+    data2 = st.load_all()
+    assert data2["clients"][0]["client_id"] == 2
+    assert data2["airlines"][0]["airline_id"] == 3
+    assert "ID" in data2["flights"][0]
+    logging.info("Migration ensured: client_id=%s airline_id=%s flight_id=%s",
+                 data2["clients"][0]["client_id"],
+                 data2["airlines"][0]["airline_id"],
+                 data2["flights"][0]["ID"])

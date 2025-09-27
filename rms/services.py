@@ -1,23 +1,15 @@
 # services.py
 from typing import Dict, List, Optional, Tuple
 import logging
+from datetime import datetime
 
 from models import Client, Airline, Flight
 from storage import JsonlStorage
+from catalogs import COUNTRY_CATALOG, CITY_CATALOG
 
 log = logging.getLogger(__name__)
 
-# 下拉“城市/国家”目录
-CITY_CATALOG = [
-    "New York", "San Francisco", "Los Angeles",
-    "Tokyo", "Osaka",
-    "Beijing", "Shanghai", "Shenzhen",
-    "London", "Paris"
-]
-COUNTRY_CATALOG = ["US", "JP", "CN", "UK", "FR", "DE", "CA", "AU", "SG", "KR"]
-
 REQUIRED_CLIENT_FIELDS = ("Name", "Address1", "City", "State", "Zip", "Country", "Phone")
-
 
 class RMS:
     def __init__(self, storage: Optional[JsonlStorage] = None):
@@ -65,7 +57,7 @@ class RMS:
         return CITY_CATALOG
 
     def list_countries(self) -> List[str]:
-        return COUNTER_CATALOG if (COUNTER_CATALOG := COUNTRY_CATALOG) else COUNTRY_CATALOG
+        return COUNTRY_CATALOG
 
     def list_clients_combo(self) -> List[str]:
         # "client_id - Name (Phone)"
@@ -121,11 +113,14 @@ class RMS:
                 out.append(r); continue
             if q in str(r.get("Phone", "")).lower() or q in str(r.get("Name", "")).lower():
                 out.append(r)
+        log.info("Search clients q=%s -> %d", q, len(out))
         return out
 
     # ---------- 航空公司 ----------
     def create_airline(self, data: Dict) -> Dict:
         data["Type"] = "airline"
+        if not data.get("CompanyName"):
+            raise ValueError("CompanyName is required")
         new_id = self._next_id(self.airlines, "airline_id")
         a = Airline(airline_id=new_id, **{k: v for k, v in data.items() if k != "airline_id"})
         self.airlines.append(a.to_dict())
@@ -152,6 +147,19 @@ class RMS:
         self._maybe_save()
         log.info("Delete airline %s", airline_id)
 
+    def search_airlines(self, q: str) -> List[Dict]:
+        q = (q or "").strip().lower()
+        if not q:
+            return []
+        out: List[Dict] = []
+        for r in self.airlines:
+            if q.isdigit() and int(q) == int(r.get("airline_id", 0)):
+                out.append(r); continue
+            if q in str(r.get("CompanyName", "")).lower():
+                out.append(r)
+        log.info("Search airlines q=%s -> %d", q, len(out))
+        return out
+
     # ---------- 航班 ----------
     def _check_fk(self, client_id: int, airline_id: int):
         if not self._find(self.clients, "client_id", client_id):
@@ -162,6 +170,11 @@ class RMS:
     def create_flight(self, data: Dict) -> Dict:
         data["Type"] = "flight"
         self._check_fk(int(data["client_id"]), int(data["airline_id"]))
+        # 校验日期
+        try:
+            datetime.strptime(data.get("Date", ""), "%Y-%m-%d %H:%M")
+        except Exception:
+            raise ValueError("Date must be 'YYYY-MM-DD HH:MM'")
         new_id = self._next_id(self.flights, "ID")
         f = Flight(ID=new_id, **{k: v for k, v in data.items() if k != "ID"})
         self.flights.append(f.to_dict())
@@ -175,6 +188,11 @@ class RMS:
             raise KeyError(f"Flight {flight_id} not found")
         merged = {**row, **patch, "Type": "flight", "ID": flight_id}
         self._check_fk(int(merged["client_id"]), int(merged["airline_id"]))
+        # 校验日期
+        try:
+            datetime.strptime(merged.get("Date", ""), "%Y-%m-%d %H:%M")
+        except Exception:
+            raise ValueError("Date must be 'YYYY-MM-DD HH:MM'")
         self.flights[idx] = merged
         self._maybe_save()
         log.info("Update flight %s -> %s", flight_id, merged)
@@ -189,20 +207,6 @@ class RMS:
         log.info("Delete flight %s", flight_id)
 
     # ---------- 航班查询 ----------
-    def search_flights_by_client(self, client_id: int) -> List[Dict]:
-        out: List[Dict] = []
-        for f in self.flights:
-            if int(f.get("client_id", 0)) != int(client_id):
-                continue
-            enr = dict(f)
-            c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
-            a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
-            enr["ClientName"] = c.get("Name", "")
-            enr["Phone"] = c.get("Phone", "")
-            enr["Airline"] = a.get("CompanyName", "")
-            out.append(enr)
-        return out
-
     def search_flights(self, q: str) -> List[Dict]:
         q = (q or "").strip().lower()
         if not q:
@@ -226,17 +230,5 @@ class RMS:
             enr["Phone"] = c.get("Phone", "")
             enr["Airline"] = a.get("CompanyName", "")
             out.append(enr)
-        return out
-
-    def search_flights_by_fk(self, client_id: int, airline_id: int) -> List[Dict]:
-        out: List[Dict] = []
-        for f in self.flights:
-            if int(f.get("client_id", 0)) == int(client_id) and int(f.get("airline_id", 0)) == int(airline_id):
-                enr = dict(f)
-                a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
-                c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
-                enr["ClientName"] = c.get("Name", "")
-                enr["Phone"] = c.get("Phone", "")
-                enr["Airline"] = a.get("CompanyName", "")
-                out.append(enr)
+        log.info("Search flights q=%s -> %d", q, len(out))
         return out
