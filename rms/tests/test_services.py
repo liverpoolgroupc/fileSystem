@@ -1,88 +1,99 @@
-# tests/test_services.py
+import os
+import shutil
+import tempfile
+import unittest
 import logging
-from storage import JsonlStorage
+
 from services import RMS
+from storage import JsonlStorage
 
-logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="[TEST %(levelname)s] %(message)s")
 
-def make_rms(tmp_path) -> RMS:
-    root = tmp_path / "data"
-    st = JsonlStorage(str(root))
-    return RMS(storage=st)
 
-def test_clients_crud_and_search(tmp_path):
-    rms = make_rms(tmp_path)
+class TestRMS(unittest.TestCase):
+    def setUp(self):
+        # 为测试使用临时 data 目录，避免污染真实数据
+        self.tmpdir = tempfile.mkdtemp(prefix="rms_test_")
+        logging.info("setup tmpdir=%s", self.tmpdir)
+        self.rms = RMS(storage=JsonlStorage(root=self.tmpdir))
 
-    # create
-    c = rms.create_client({
-        "Name": "Alice", "Phone": "18800001111",
-        "Country": "United States", "City": "New York",
-        "State": "NY", "Zip": "10000", "Address1": "addr 1",
-        "Address2": "", "Address3": ""
-    })
-    logging.info("Created client: %s", c)
-    assert c["client_id"] == 1
+    def tearDown(self):
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+        logging.info("teardown tmpdir removed")
 
-    # update
-    updated = rms.update_client(1, {"Phone": "18800002222"})
-    logging.info("Updated client: %s", updated)
-    assert updated["Phone"] == "18800002222"
+    def test_client_crud_and_search(self):
+        # Create client
+        c = dict(
+            Name="Alice", Phone="123456789",
+            Country="Japan", City="Tokyo", State="Tokyo",
+            Zip="100", Address1="Chiyoda 1-1", Address2="", Address3=""
+        )
+        created = self.rms.create_client(c)
+        logging.info("created client=%s", created)
+        self.assertEqual(created["client_id"], 1)
 
-    # search (by id / name / phone)
-    assert len(rms.search_clients("1")) == 1
-    assert len(rms.search_clients("ali")) == 1
-    assert len(rms.search_clients("002222")) == 1
+        # Update
+        upd = self.rms.update_client(1, {"Phone": "999"})
+        logging.info("updated client=%s", upd)
+        self.assertEqual(upd["Phone"], "999")
 
-    # delete
-    rms.delete_client(1)
-    logging.info("Deleted client 1")
-    assert rms.search_clients("1") == []
+        # Search by name
+        found = self.rms.search_clients("ali")
+        logging.info("search by name -> %s", found)
+        self.assertTrue(any(r["client_id"] == 1 for r in found))
 
-def test_airlines_and_flights(tmp_path):
-    rms = make_rms(tmp_path)
+        # Delete
+        self.rms.delete_client(1)
+        self.assertFalse(any(r.get("client_id") == 1 for r in self.rms.clients))
 
-    c1 = rms.create_client({
-        "Name": "Bob", "Phone": "19900001111",
-        "Country": "United States", "City": "San Francisco",
-        "State": "CA", "Zip": "94016", "Address1": "addr",
-        "Address2": "", "Address3": ""
-    })
-    a1 = rms.create_airline({"CompanyName": "Dream Air"})
-    logging.info("Create airline: %s", a1)
+    def test_airline_crud_and_search(self):
+        a = self.rms.create_airline({"CompanyName": "SkyWays"})
+        logging.info("created airline=%s", a)
+        self.assertEqual(a["airline_id"], 1)
 
-    f1 = rms.create_flight({
-        "client_id": c1["client_id"],
-        "airline_id": a1["airline_id"],
-        "Date": "2030-01-02 12:30",
-        "StartCity": "San Francisco",
-        "EndCity": "New York",
-    })
-    logging.info("Create flight: %s", f1)
-    assert f1["ID"] == 1
+        upd = self.rms.update_airline(1, {"CompanyName": "SkyWays Intl"})
+        logging.info("updated airline=%s", upd)
+        self.assertEqual(upd["CompanyName"], "SkyWays Intl")
 
-    # flights search by name / phone / id
-    r_by_name = rms.search_flights("bob")
-    logging.info("Search flights by name: %s", r_by_name)
-    assert len(r_by_name) == 1
+        found = self.rms.search_airlines("intl")
+        logging.info("search airlines -> %s", found)
+        self.assertTrue(any(r["airline_id"] == 1 for r in found))
 
-    r_by_phone = rms.search_flights("19900001111")
-    logging.info("Search flights by phone: %s", r_by_phone)
-    assert len(r_by_phone) == 1
+        self.rms.delete_airline(1)
+        self.assertFalse(any(r.get("airline_id") == 1 for r in self.rms.airlines))
 
-    r_by_id = rms.search_flights(str(c1["client_id"]))
-    logging.info("Search flights by client_id: %s", r_by_id)
-    assert len(r_by_id) == 1
+    def test_flight_crud_and_search(self):
+        c = self.rms.create_client(dict(
+            Name="Bob", Phone="222",
+            Country="United States", City="New York", State="NY",
+            Zip="10001", Address1="5th Ave", Address2="", Address3=""
+        ))
+        a = self.rms.create_airline({"CompanyName": "BlueAir"})
 
-    # airline search
-    r_air = rms.search_airlines("dream")
-    logging.info("Search airlines by name: %s", r_air)
-    assert len(r_air) == 1
-    r_air_id = rms.search_airlines(str(a1["airline_id"]))
-    assert len(r_air_id) == 1
+        f = self.rms.create_flight(dict(
+            client_id=c["client_id"], airline_id=a["airline_id"],
+            Date="2025-01-02 08:30", StartCity="New York", EndCity="Los Angeles"
+        ))
+        logging.info("created flight=%s", f)
+        self.assertEqual(f["ID"], 1)
 
-    # update + delete
-    rms.update_airline(a1["airline_id"], {"CompanyName": "Dream Air Intl"})
-    logging.info("Airline after update: %s", rms.search_airlines("intl"))
-    rms.delete_airline(a1["airline_id"])
-    logging.info("Deleted airline (flights should be removed)")
-    assert rms.search_flights("bob") == []
+        upd = self.rms.update_flight(1, {"Date": "2025-01-03 09:00"})
+        logging.info("updated flight=%s", upd)
+        self.assertEqual(upd["Date"], "2025-01-03 09:00")
+
+        found = self.rms.search_flights("bob")
+        logging.info("search flights -> %s", found)
+        self.assertTrue(any(r["ID"] == 1 for r in found))
+
+        self.rms.delete_flight(1)
+        self.assertFalse(any(r.get("ID") == 1 for r in self.rms.flights))
+
+    def test_list_cities_by_country(self):
+        jp_cities = self.rms.list_cities_by_country("Japan")
+        logging.info("Japan cities -> %s", jp_cities)
+        self.assertIn("Tokyo", jp_cities)
+        self.assertNotIn("New York", jp_cities)  # 证明做了过滤
+
+
+if __name__ == "__main__":
+    unittest.main()

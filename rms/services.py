@@ -1,15 +1,15 @@
-# services.py
 from typing import Dict, List, Optional, Tuple
 import logging
 from datetime import datetime
 
 from models import Client, Airline, Flight
 from storage import JsonlStorage
-from catalogs import COUNTRY_CATALOG, CITY_CATALOG
+from catalogs import COUNTRY_CATALOG, CITY_CATALOG, COUNTRY_TO_CITIES
 
 log = logging.getLogger(__name__)
 
 REQUIRED_CLIENT_FIELDS = ("Name", "Address1", "City", "State", "Zip", "Country", "Phone")
+
 
 class RMS:
     def __init__(self, storage: Optional[JsonlStorage] = None):
@@ -58,6 +58,9 @@ class RMS:
 
     def list_countries(self) -> List[str]:
         return COUNTRY_CATALOG
+
+    def list_cities_by_country(self, country: str) -> List[str]:
+        return COUNTRY_TO_CITIES.get(country, [])
 
     def list_clients_combo(self) -> List[str]:
         # "client_id - Name (Phone)"

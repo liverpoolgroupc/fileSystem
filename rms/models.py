@@ -1,6 +1,6 @@
-# models.py
 from dataclasses import dataclass, field, asdict
 from typing import Dict
+
 
 @dataclass
 class Client:
@@ -22,6 +22,7 @@ class Client:
         d["Type"] = "client"
         return d
 
+
 @dataclass
 class Airline:
     """航空公司记录：airline_id 为主键"""
@@ -33,6 +34,7 @@ class Airline:
         d = asdict(self)
         d["Type"] = "airline"
         return d
+
 
 @dataclass
 class Flight:

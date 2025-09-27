@@ -1,4 +1,3 @@
-# app.py
 import logging
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -6,12 +5,11 @@ from datetime import datetime
 
 from services import RMS
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(levelname)s] %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
-READONLY_STYLE = "Gray.TEntry"
+READONLY_ENTRY_STYLE = "ReadonlyDeep.TEntry"
+READONLY_COMBO_STYLE = "ReadonlyDeep.TCombobox"
+
 
 class App(tk.Tk):
     def __init__(self):
@@ -31,14 +29,21 @@ class App(tk.Tk):
         nb.add(self.tab_flights, text="Flights")
         nb.pack(fill="both", expand=True)
 
-        # 样式：灰色只读
+        # ---- 深灰只读样式（macOS Aqua 下也更明显）----
         self.style = ttk.Style(self)
-        self.style.configure(READONLY_STYLE, foreground="#666")
+        # 入口：创建继承 TEntry/TCombobox 的深灰只读样式
+        self.style.configure(READONLY_ENTRY_STYLE, foreground="#404040")
+        self.style.map(READONLY_ENTRY_STYLE, fieldbackground=[("readonly", "#d0d0d0")])
 
+        self.style.configure(READONLY_COMBO_STYLE, foreground="#404040")
+        self.style.map(READONLY_COMBO_STYLE, fieldbackground=[("readonly", "#d0d0d0")])
+
+        # 构建各页
         self.build_clients_tab()
         self.build_airlines_tab()
         self.build_flights_tab()
 
+        # 首次刷新
         self.refresh_clients()
         self.refresh_airlines()
         self.refresh_flights()
@@ -54,44 +59,49 @@ class App(tk.Tk):
 
         # 行0：ID / Type（只读置灰）
         ttk.Label(form, text="client_id").grid(row=0, column=0, sticky="e", padx=4, pady=4)
-        self.ent_client_id = ttk.Entry(form, width=12, state="readonly", style=READONLY_STYLE)
+        self.ent_client_id = ttk.Entry(form, width=14, state="readonly", style=READONLY_ENTRY_STYLE)
         self.ent_client_id.grid(row=0, column=1, sticky="w", padx=4, pady=4)
 
         ttk.Label(form, text="Type").grid(row=0, column=2, sticky="e", padx=4, pady=4)
-        self.ent_client_type = ttk.Entry(form, width=12, state="readonly", style=READONLY_STYLE)
+        self._client_type_var = tk.StringVar(value="client")
+        self.ent_client_type = ttk.Entry(
+            form, width=14, state="readonly", style=READONLY_ENTRY_STYLE, textvariable=self._client_type_var
+        )
         self.ent_client_type.grid(row=0, column=3, sticky="w", padx=4, pady=4)
-        self.ent_client_type_var = tk.StringVar(value="client")
-        self.ent_client_type.configure(textvariable=self.ent_client_type_var)
 
-        # ⚠️ 字段顺序：Name → Phone → Country → City → State → Zip → Address1/2/3
         # 行1：Name / Phone
         ttk.Label(form, text="Name*").grid(row=1, column=0, sticky="e", padx=4, pady=4)
         self.ent_name = ttk.Entry(form, width=40)
         self.ent_name.grid(row=1, column=1, sticky="w", padx=4, pady=4)
 
         ttk.Label(form, text="Phone*").grid(row=1, column=2, sticky="e", padx=4, pady=4)
-        self.ent_phone = ttk.Entry(form, width=20)
+        self.ent_phone = ttk.Entry(form, width=22)
         self.ent_phone.grid(row=1, column=3, sticky="w", padx=4, pady=4)
 
-        # 行2：Country / City（下拉）
+        # 行2：Country（选择后过滤 City）
         ttk.Label(form, text="Country*").grid(row=2, column=0, sticky="e", padx=4, pady=4)
-        self.cmb_country = ttk.Combobox(form, width=24, values=self.rms.list_countries(), state="readonly")
+        self.cmb_country = ttk.Combobox(
+            form, width=26, values=self.rms.list_countries(), state="readonly"
+        )
         self.cmb_country.grid(row=2, column=1, sticky="w", padx=4, pady=4)
+        self.cmb_country.bind("<<ComboboxSelected>>", self.on_client_country_selected)
 
+        # 行2：City（会随 Country 变化）
         ttk.Label(form, text="City*").grid(row=2, column=2, sticky="e", padx=4, pady=4)
-        self.cmb_city = ttk.Combobox(form, width=24, values=self.rms.list_cities(), state="readonly")
+        self.cmb_city = ttk.Combobox(form, width=26, state="readonly")
         self.cmb_city.grid(row=2, column=3, sticky="w", padx=4, pady=4)
+        # 初始为空，等选择 Country 后由 on_client_country_selected 填充
 
         # 行3：State / Zip
         ttk.Label(form, text="State*").grid(row=3, column=0, sticky="e", padx=4, pady=4)
-        self.ent_state = ttk.Entry(form, width=18)
+        self.ent_state = ttk.Entry(form, width=22)
         self.ent_state.grid(row=3, column=1, sticky="w", padx=4, pady=4)
 
         ttk.Label(form, text="Zip*").grid(row=3, column=2, sticky="e", padx=4, pady=4)
-        self.ent_zip = ttk.Entry(form, width=18)
+        self.ent_zip = ttk.Entry(form, width=22)
         self.ent_zip.grid(row=3, column=3, sticky="w", padx=4, pady=4)
 
-        # 行4：Address1/2/3
+        # 行4：Address1/2
         ttk.Label(form, text="Address1*").grid(row=4, column=0, sticky="e", padx=4, pady=4)
         self.ent_addr1 = ttk.Entry(form, width=40)
         self.ent_addr1.grid(row=4, column=1, sticky="w", padx=4, pady=4)
@@ -100,6 +110,7 @@ class App(tk.Tk):
         self.ent_addr2 = ttk.Entry(form, width=40)
         self.ent_addr2.grid(row=4, column=3, sticky="w", padx=4, pady=4)
 
+        # 行5：Address3
         ttk.Label(form, text="Address3").grid(row=5, column=0, sticky="e", padx=4, pady=4)
         self.ent_addr3 = ttk.Entry(form, width=40)
         self.ent_addr3.grid(row=5, column=1, sticky="w", padx=4, pady=4)
@@ -112,27 +123,36 @@ class App(tk.Tk):
         ttk.Button(btns, text="Delete", command=self.on_client_delete).pack(side="left", padx=4)
 
         # 搜索栏 + 列表
-        bar = ttk.Frame(f); bar.pack(side="top", fill="x", padx=8, pady=4)
+        bar = ttk.Frame(f)
+        bar.pack(side="top", fill="x", padx=8, pady=4)
         ttk.Label(bar, text="Search (by client_id / phone / name)").pack(side="left")
         self.ent_client_search = ttk.Entry(bar, width=32)
         self.ent_client_search.pack(side="left", padx=6)
         ttk.Button(bar, text="Find", command=self.on_client_search).pack(side="left", padx=4)
         ttk.Button(bar, text="Show All", command=self.refresh_clients).pack(side="left", padx=4)
 
-        # ⚠️ 列表：显示所有主要字段
         client_cols = (
             "client_id", "Name", "Phone", "Country", "City", "State",
             "Zip", "Address1", "Address2", "Address3"
         )
-        self.tree_clients = ttk.Treeview(f, columns=client_cols, show="headings", height=12)
         widths = (90, 180, 120, 140, 120, 100, 90, 200, 160, 160)
+        self.tree_clients = ttk.Treeview(f, columns=client_cols, show="headings", height=12)
         for c, w in zip(client_cols, widths):
             self.tree_clients.heading(c, text=c)
             self.tree_clients.column(c, width=w, anchor="w")
         self.tree_clients.pack(fill="both", expand=True, padx=8, pady=8)
         self.tree_clients.bind("<<TreeviewSelect>>", self.on_client_select)
+        self._client_columns = client_cols
 
-        self._client_columns = client_cols  # 保存列顺序用于刷新
+    # 国家变更 → 城市列表联动
+    def on_client_country_selected(self, _evt=None):
+        country = self.cmb_country.get().strip()
+        cities = self.rms.list_cities_by_country(country)
+        self.cmb_city.configure(values=cities)
+        if cities:
+            self.cmb_city.set(cities[0])
+        else:
+            self.cmb_city.set("")
 
     def _collect_client_form(self) -> dict:
         return dict(
@@ -163,15 +183,25 @@ class App(tk.Tk):
         values = self.tree_clients.item(sel[0], "values")
         row = {self._client_columns[i]: values[i] for i in range(len(self._client_columns))}
 
+        # 只读 id
         self.ent_client_id.configure(state="normal")
         self.ent_client_id.delete(0, "end")
         self.ent_client_id.insert(0, row.get("client_id"))
         self.ent_client_id.configure(state="readonly")
 
+        # Type 始终为 "client"
+        self._client_type_var.set("client")
+
+        # 回填各字段
         self.ent_name.delete(0, "end"); self.ent_name.insert(0, row.get("Name", ""))
         self.ent_phone.delete(0, "end"); self.ent_phone.insert(0, row.get("Phone", ""))
-        self.cmb_country.set(row.get("Country", ""))
+
+        # 先设置 Country，再联动 City 值域，最后设 City 值
+        country = row.get("Country", "")
+        self.cmb_country.set(country)
+        self.on_client_country_selected()
         self.cmb_city.set(row.get("City", ""))
+
         self.ent_state.delete(0, "end"); self.ent_state.insert(0, row.get("State", ""))
         self.ent_zip.delete(0, "end"); self.ent_zip.insert(0, row.get("Zip", ""))
         self.ent_addr1.delete(0, "end"); self.ent_addr1.insert(0, row.get("Address1", ""))
@@ -234,14 +264,15 @@ class App(tk.Tk):
         form.pack(side="top", fill="x", padx=8, pady=8)
 
         ttk.Label(form, text="airline_id").grid(row=0, column=0, sticky="e", padx=4, pady=4)
-        self.ent_airline_id = ttk.Entry(form, width=12, state="readonly", style=READONLY_STYLE)
+        self.ent_airline_id = ttk.Entry(form, width=14, state="readonly", style=READONLY_ENTRY_STYLE)
         self.ent_airline_id.grid(row=0, column=1, sticky="w", padx=4, pady=4)
 
         ttk.Label(form, text="Type").grid(row=0, column=2, sticky="e", padx=4, pady=4)
-        self.ent_airline_type = ttk.Entry(form, width=12, state="readonly", style=READONLY_STYLE)
+        self._airline_type_var = tk.StringVar(value="airline")
+        self.ent_airline_type = ttk.Entry(
+            form, width=14, state="readonly", style=READONLY_ENTRY_STYLE, textvariable=self._airline_type_var
+        )
         self.ent_airline_type.grid(row=0, column=3, sticky="w", padx=4, pady=4)
-        var = tk.StringVar(value="airline")
-        self.ent_airline_type.configure(textvariable=var)
 
         ttk.Label(form, text="CompanyName*").grid(row=1, column=0, sticky="e", padx=4, pady=4)
         self.ent_company = ttk.Entry(form, width=40)
@@ -252,7 +283,7 @@ class App(tk.Tk):
         ttk.Button(bar, text="Update", command=self.on_airline_update).pack(side="left", padx=4)
         ttk.Button(bar, text="Delete", command=self.on_airline_delete).pack(side="left", padx=4)
 
-        # 🔎 搜索栏：支持 airline_id / CompanyName
+        # 搜索：支持 airline_id / CompanyName
         sbar = ttk.Frame(f); sbar.pack(side="top", fill="x", padx=8, pady=4)
         ttk.Label(sbar, text="Search (by airline_id / company)").pack(side="left")
         self.ent_airline_search = ttk.Entry(sbar, width=32)
@@ -273,8 +304,8 @@ class App(tk.Tk):
             rows = self.rms.airlines
         self.tree_airlines.delete(*self.tree_airlines.get_children())
         for r in rows:
-            self.tree_airlines.insert("", "end", values=(r.get("airline_id"), r.get("Type", "airline"),
-                                                         r.get("CompanyName", "")))
+            # Type 始终显示 "airline"
+            self.tree_airlines.insert("", "end", values=(r.get("airline_id"), "airline", r.get("CompanyName", "")))
 
     def on_airline_select(self, _evt):
         sel = self.tree_airlines.selection()
@@ -284,10 +315,14 @@ class App(tk.Tk):
         aid = int(vals[0])
         r = self.rms._find(self.rms.airlines, "airline_id", aid) or {}
 
+        # id 只读
         self.ent_airline_id.configure(state="normal")
         self.ent_airline_id.delete(0, "end")
         self.ent_airline_id.insert(0, r.get("airline_id"))
         self.ent_airline_id.configure(state="readonly")
+
+        # Type 强制 airine
+        self._airline_type_var.set("airline")
 
         self.ent_company.delete(0, "end")
         self.ent_company.insert(0, r.get("CompanyName", ""))
@@ -348,7 +383,7 @@ class App(tk.Tk):
 
         # 航班 ID（只读）
         ttk.Label(form, text="Flight ID").grid(row=0, column=0, sticky="e", padx=4, pady=4)
-        self.ent_fid = ttk.Entry(form, width=12, state="readonly", style=READONLY_STYLE)
+        self.ent_fid = ttk.Entry(form, width=14, state="readonly", style=READONLY_ENTRY_STYLE)
         self.ent_fid.grid(row=0, column=1, sticky="w", padx=4, pady=4)
 
         # Client 下拉
@@ -377,7 +412,7 @@ class App(tk.Tk):
         for i, cb in enumerate([self.cbY, self.cbM, self.cbD, self.cbH, self.cbMin], start=1):
             cb.grid(row=3, column=i, sticky="w", padx=2, pady=4)
 
-        # 起讫城市
+        # 起讫城市（使用全局 Top 城市清单）
         ttk.Label(form, text="StartCity").grid(row=4, column=0, sticky="e", padx=4, pady=4)
         self.cmb_start = ttk.Combobox(form, width=20, values=self.rms.list_cities(), state="readonly")
         self.cmb_start.grid(row=4, column=1, sticky="w", padx=4, pady=4)
@@ -391,7 +426,7 @@ class App(tk.Tk):
         ttk.Button(bar, text="Update", command=self.on_flight_update).pack(side="left", padx=4)
         ttk.Button(bar, text="Delete", command=self.on_flight_delete).pack(side="left", padx=4)
 
-        # 搜索（⚠️ 按需求：隐藏 client+airline 联合搜索 UI）
+        # 搜索（按需求：隐藏 client+airline 联合搜索 UI，仅保留普通搜索+Show All）
         sbar = ttk.Frame(f); sbar.pack(side="top", fill="x", padx=8, pady=4)
         ttk.Label(sbar, text="Search by client_id / name / phone").pack(side="left")
         self.ent_fsearch = ttk.Entry(sbar, width=36); self.ent_fsearch.pack(side="left", padx=6)
@@ -545,6 +580,7 @@ class App(tk.Tk):
             "EndCity": r.get("EndCity", "")
         } for r in rows]
         self.refresh_flights(disp)
+
 
 if __name__ == "__main__":
     App().mainloop()
