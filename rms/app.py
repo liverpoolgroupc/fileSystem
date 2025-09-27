@@ -2,427 +2,542 @@
 import logging
 import tkinter as tk
 from tkinter import ttk, messagebox
+from datetime import datetime
+
 from services import RMS
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    format="[%(levelname)s] %(message)s"
 )
-log = logging.getLogger("RMS.GUI")
 
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Record Management System (Write-through)")
-        self.geometry("1000x620")
-        self.rms = RMS(autosave=True)
+        self.title("Record Management System")
+        self.geometry("1000x640")
+        self.resizable(True, True)
+        
+
+        self.rms = RMS()
 
         nb = ttk.Notebook(self)
+        self.tab_clients = ttk.Frame(nb)
+        self.tab_airlines = ttk.Frame(nb)
+        self.tab_flights = ttk.Frame(nb)
+        nb.add(self.tab_clients, text="Clients")
+        nb.add(self.tab_airlines, text="Airlines")
+        nb.add(self.tab_flights, text="Flights")
         nb.pack(fill="both", expand=True)
 
-        self.client_tab = ClientTab(nb, self.rms)
-        self.airline_tab = AirlineTab(nb, self.rms)
-        self.flight_tab = FlightTab(nb, self.rms)
+        # 样式：灰色只读
+        self.style = ttk.Style(self)
+        self.style.configure("Gray.TEntry", foreground="#666")
 
-        nb.add(self.client_tab, text="Clients")
-        nb.add(self.airline_tab, text="Airlines")
-        nb.add(self.flight_tab, text="Flights")
+        self.build_clients_tab()
+        self.build_airlines_tab()
+        self.build_flights_tab()
 
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.refresh_clients()
+        self.refresh_airlines()
+        self.refresh_flights()
 
-    def on_close(self):
-        try:
-            self.rms.save()
-        except Exception as e:
-            messagebox.showerror("Save error", str(e))
-        self.destroy()
+    # ==============================================
+    # Clients Tab
+    # ==============================================
+    def build_clients_tab(self):
+        f = self.tab_clients
 
+        form = ttk.LabelFrame(f, text="Client Form")
+        form.pack(side="top", fill="x", padx=8, pady=8)
 
-# ----------------- Client Tab -----------------
-class ClientTab(ttk.Frame):
-    FIELDS = [
-        ("Name", 25), ("Address1", 25), ("Address2", 25), ("Address3", 25),
-        ("City", 20), ("State", 10), ("Zip", 10), ("Country", 15), ("Phone", 18),
-    ]
+        # row0
+        ttk.Label(form, text="client_id").grid(row=0, column=0, sticky="e", padx=4, pady=4)
+        self.ent_client_id = ttk.Entry(form, width=12, state="readonly", style="Gray.TEntry")
+        self.ent_client_id.grid(row=0, column=1, sticky="w", padx=4, pady=4)
 
-    def __init__(self, parent, rms: RMS):
-        super().__init__(parent)
-        self.rms = rms
+        ttk.Label(form, text="Type").grid(row=0, column=2, sticky="e", padx=4, pady=4)
+        self.ent_client_type = ttk.Entry(form, width=12, state="readonly", style="Gray.TEntry")
+        self.ent_client_type.grid(row=0, column=3, sticky="w", padx=4, pady=4)
+        self.ent_client_type_var = tk.StringVar(value="client")
+        self.ent_client_type.configure(textvariable=self.ent_client_type_var)
 
-        frm = ttk.Frame(self)
-        frm.pack(side="left", fill="y", padx=10, pady=10)
+        # row1
+        ttk.Label(form, text="Name*").grid(row=1, column=0, sticky="e", padx=4, pady=4)
+        self.ent_name = ttk.Entry(form, width=40)
+        self.ent_name.grid(row=1, column=1, columnspan=3, sticky="w", padx=4, pady=4)
 
-        ttk.Label(frm, text="ID").grid(row=0, column=0, sticky="w")
-        self.ent_id = ttk.Entry(frm, width=10)
-        self.ent_id.grid(row=0, column=1, sticky="w")
-        self.ent_id.configure(state="readonly")
+        # row2
+        ttk.Label(form, text="Address1*").grid(row=2, column=0, sticky="e", padx=4, pady=4)
+        self.ent_addr1 = ttk.Entry(form, width=40)
+        self.ent_addr1.grid(row=2, column=1, columnspan=3, sticky="w", padx=4, pady=4)
 
-        ttk.Label(frm, text="Type").grid(row=1, column=0, sticky="w")
-        self.ent_type = ttk.Entry(frm, width=10)
-        self.ent_type.grid(row=1, column=1, sticky="w")
-        self.ent_type.insert(0, "client")
-        self.ent_type.configure(state="readonly")
+        # row3
+        ttk.Label(form, text="Address2").grid(row=3, column=0, sticky="e", padx=4, pady=4)
+        self.ent_addr2 = ttk.Entry(form, width=40)
+        self.ent_addr2.grid(row=3, column=1, columnspan=3, sticky="w", padx=4, pady=4)
 
-        self.inputs = {}
-        base_row = 2
-        for i, (label, w) in enumerate(self.FIELDS):
-            ttk.Label(frm, text=label).grid(row=base_row + i, column=0, sticky="w")
-            e = ttk.Entry(frm, width=w)
-            e.grid(row=base_row + i, column=1, sticky="w", pady=2)
-            self.inputs[label] = e
+        # row4
+        ttk.Label(form, text="Address3").grid(row=4, column=0, sticky="e", padx=4, pady=4)
+        self.ent_addr3 = ttk.Entry(form, width=40)
+        self.ent_addr3.grid(row=4, column=1, columnspan=3, sticky="w", padx=4, pady=4)
 
-        r = base_row + len(self.FIELDS)
-        ttk.Button(frm, text="Create", command=self.create).grid(row=r, column=0, pady=8, sticky="w")
-        ttk.Button(frm, text="Update", command=self.update).grid(row=r, column=1, pady=8, sticky="w")
-        ttk.Button(frm, text="Delete", command=self.delete).grid(row=r, column=2, pady=8, sticky="w")
+        # row5
+        ttk.Label(form, text="City*").grid(row=5, column=0, sticky="e", padx=4, pady=4)
+        self.cmb_city = ttk.Combobox(form, width=30, values=self.rms.list_cities(), state="readonly")
+        self.cmb_city.grid(row=5, column=1, sticky="w", padx=4, pady=4)
 
-        ttk.Label(frm, text="Search").grid(row=r + 1, column=0, sticky="w", pady=(10, 0))
-        self.ent_search = ttk.Entry(frm, width=25)
-        self.ent_search.grid(row=r + 1, column=1, sticky="w", pady=(10, 0))
-        ttk.Button(frm, text="Go", command=self.search).grid(row=r + 1, column=2, sticky="w", pady=(10, 0))
+        ttk.Label(form, text="State*").grid(row=5, column=2, sticky="e", padx=4, pady=4)
+        self.ent_state = ttk.Entry(form, width=18)
+        self.ent_state.grid(row=5, column=3, sticky="w", padx=4, pady=4)
 
-        self.list = tk.Listbox(self, width=90)
-        self.list.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-        self.list.bind("<<ListboxSelect>>", self.on_select)
+        # row6
+        ttk.Label(form, text="Zip*").grid(row=6, column=0, sticky="e", padx=4, pady=4)
+        self.ent_zip = ttk.Entry(form, width=18)
+        self.ent_zip.grid(row=6, column=1, sticky="w", padx=4, pady=4)
 
-        self.refresh()
+        ttk.Label(form, text="Country*").grid(row=6, column=2, sticky="e", padx=4, pady=4)
+        self.cmb_country = ttk.Combobox(form, width=18, values=self.rms.list_countries(), state="readonly")
+        self.cmb_country.grid(row=6, column=3, sticky="w", padx=4, pady=4)
 
-    def refresh(self, rows=None):
-        rows = rows if rows is not None else self.rms.clients
-        self.list.delete(0, tk.END)
-        for c in rows:
-            self.list.insert(
-                tk.END,
-                f'ID={c["ID"]}  Name={c.get("Name","")}  City={c.get("City","")}  Phone={c.get("Phone","")}'
-            )
+        # row7
+        ttk.Label(form, text="Phone*").grid(row=7, column=0, sticky="e", padx=4, pady=4)
+        self.ent_phone = ttk.Entry(form, width=20)
+        self.ent_phone.grid(row=7, column=1, sticky="w", padx=4, pady=4)
 
-    def _collect_form(self) -> dict:
-        data = {"Type": "client"}
-        for k, e in self.inputs.items():
-            data[k] = e.get().strip()
-        return data
+        # row8 操作按钮
+        btns = ttk.Frame(form)
+        btns.grid(row=8, column=0, columnspan=4, sticky="w", padx=4, pady=8)
+        ttk.Button(btns, text="Create", command=self.on_client_create).pack(side="left", padx=4)
+        ttk.Button(btns, text="Update", command=self.on_client_update).pack(side="left", padx=4)
+        ttk.Button(btns, text="Delete", command=self.on_client_delete).pack(side="left", padx=4)
 
-    def _clear_form(self):
-        self.ent_id.configure(state="normal")
-        self.ent_id.delete(0, tk.END)
-        self.ent_id.configure(state="readonly")
-        for e in self.inputs.values():
-            e.delete(0, tk.END)
+        # 搜索栏 + 列表
+        bar = ttk.Frame(f); bar.pack(side="top", fill="x", padx=8, pady=4)
+        ttk.Label(bar, text="Search (by client_id / phone / name)").pack(side="left")
+        self.ent_client_search = ttk.Entry(bar, width=32)
+        self.ent_client_search.pack(side="left", padx=6)
+        ttk.Button(bar, text="Find", command=self.on_client_search).pack(side="left", padx=4)
+        ttk.Button(bar, text="Show All", command=self.refresh_clients).pack(side="left", padx=4)
 
-    def on_select(self, _evt):
-        cur = self.list.curselection()
-        if not cur:
+        self.tree_clients = ttk.Treeview(f, columns=("client_id", "Name", "Phone"), show="headings", height=10)
+        for c, w in (("client_id", 100), ("Name", 260), ("Phone", 160)):
+            self.tree_clients.heading(c, text=c)
+            self.tree_clients.column(c, width=w, anchor="w")
+        self.tree_clients.pack(fill="both", expand=True, padx=8, pady=8)
+        self.tree_clients.bind("<<TreeviewSelect>>", self.on_client_select)
+
+    def _collect_client_form(self) -> dict:
+        return dict(
+            Name=self.ent_name.get().strip(),
+            Address1=self.ent_addr1.get().strip(),
+            Address2=self.ent_addr2.get().strip(),
+            Address3=self.ent_addr3.get().strip(),
+            City=self.cmb_city.get().strip(),
+            State=self.ent_state.get().strip(),
+            Zip=self.ent_zip.get().strip(),
+            Country=self.cmb_country.get().strip(),
+            Phone=self.ent_phone.get().strip(),
+            Type="client",
+        )
+
+    def refresh_clients(self, rows=None):
+        if rows is None:
+            rows = self.rms.clients
+        self.tree_clients.delete(*self.tree_clients.get_children())
+        for r in rows:
+            self.tree_clients.insert("", "end", values=(r.get("client_id"), r.get("Name", ""), r.get("Phone", "")))
+
+    def on_client_select(self, _evt):
+        sel = self.tree_clients.selection()
+        if not sel:
             return
-        text = self.list.get(cur[0])
-        cid = int(text.split()[0].split("=")[1])
-        c = self.rms.get_client(cid)
-        if not c:
-            return
-        self.ent_id.configure(state="normal")
-        self.ent_id.delete(0, tk.END)
-        self.ent_id.insert(0, str(c["ID"]))
-        self.ent_id.configure(state="readonly")
-        for k, e in self.inputs.items():
-            e.delete(0, tk.END)
-            e.insert(0, c.get(k, ""))
+        vals = self.tree_clients.item(sel[0], "values")
+        cid = int(vals[0])
+        r = self.rms._find(self.rms.clients, "client_id", cid) or {}
+        # 填充 form
+        self.ent_client_id.configure(state="normal")
+        self.ent_client_id.delete(0, "end")
+        self.ent_client_id.insert(0, r.get("client_id"))
+        self.ent_client_id.configure(state="readonly")
 
-    def create(self):
-        d = self._collect_form()
-        if not d["Name"]:
-            messagebox.showwarning("Input", "Name is required")
-            return
+        self.ent_name.delete(0, "end"); self.ent_name.insert(0, r.get("Name", ""))
+        self.ent_addr1.delete(0, "end"); self.ent_addr1.insert(0, r.get("Address1", ""))
+        self.ent_addr2.delete(0, "end"); self.ent_addr2.insert(0, r.get("Address2", ""))
+        self.ent_addr3.delete(0, "end"); self.ent_addr3.insert(0, r.get("Address3", ""))
+        self.cmb_city.set(r.get("City", ""))
+        self.ent_state.delete(0, "end"); self.ent_state.insert(0, r.get("State", ""))
+        self.ent_zip.delete(0, "end"); self.ent_zip.insert(0, r.get("Zip", ""))
+        self.cmb_country.set(r.get("Country", ""))
+        self.ent_phone.delete(0, "end"); self.ent_phone.insert(0, r.get("Phone", ""))
+
+    def on_client_create(self):
         if not messagebox.askyesno("Confirm", "Create this client?"):
             return
         try:
-            row = self.rms.create_client(d)
-            log.info("GUI create client ok: %s", row)
-            self._clear_form()
-            self.refresh()
+            data = self._collect_client_form()
+            r = self.rms.create_client(data)
+            messagebox.showinfo("OK", f"Created client {r['client_id']}")
+            self.refresh_clients()
         except Exception as e:
-            log.exception("GUI create client failed")
-            messagebox.showerror("Create Client", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def update(self):
-        cid = self.ent_id.get().strip()
+    def on_client_update(self):
+        cid = self.ent_client_id.get().strip()
         if not cid:
-            messagebox.showwarning("Update", "Please select a row from list")
+            messagebox.showerror("Error", "No client selected")
+            return
+        if not messagebox.askyesno("Confirm", f"Update client {cid}?"):
             return
         try:
-            d = self._collect_form()
-            row = self.rms.update_client(int(cid), d)
-            log.info("GUI update client ok: %s", row)
-            self.refresh()
+            data = self._collect_client_form()
+            r = self.rms.update_client(int(cid), data)
+            messagebox.showinfo("OK", f"Updated client {r['client_id']}")
+            self.refresh_clients()
         except Exception as e:
-            log.exception("GUI update client failed")
-            messagebox.showerror("Update Client", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def delete(self):
-        cur = self.list.curselection()
-        if not cur:
+    def on_client_delete(self):
+        cid = self.ent_client_id.get().strip()
+        if not cid:
+            messagebox.showerror("Error", "No client selected")
             return
-        text = self.list.get(cur[0])
-        cid = int(text.split()[0].split("=")[1])
-        if not messagebox.askyesno("Confirm", f"Delete client ID={cid}? (linked flights will be removed)"):
+        if not messagebox.askyesno("Confirm", f"Delete client {cid} and its flights?"):
             return
         try:
-            self.rms.delete_client(cid)
-            log.info("GUI delete client ok: id=%s", cid)
-            self._clear_form()
-            self.refresh()
+            self.rms.delete_client(int(cid))
+            messagebox.showinfo("OK", "Deleted.")
+            self.refresh_clients()
+            self.refresh_flights()
         except Exception as e:
-            log.exception("GUI delete client failed")
-            messagebox.showerror("Delete Client", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def search(self):
-        k = self.ent_search.get()
-        rows = self.rms.search_clients(k)
-        self.refresh(rows)
+    def on_client_search(self):
+        q = self.ent_client_search.get().strip()
+        rows = self.rms.search_clients(q)
+        self.refresh_clients(rows)
 
+    # ==============================================
+    # Airlines Tab
+    # ==============================================
+    def build_airlines_tab(self):
+        f = self.tab_airlines
+        form = ttk.LabelFrame(f, text="Airline Form")
+        form.pack(side="top", fill="x", padx=8, pady=8)
 
-# ----------------- Airline Tab（含 Update 与确认） -----------------
-class AirlineTab(ttk.Frame):
-    def __init__(self, parent, rms: RMS):
-        super().__init__(parent)
-        self.rms = rms
+        ttk.Label(form, text="airline_id").grid(row=0, column=0, sticky="e", padx=4, pady=4)
+        self.ent_airline_id = ttk.Entry(form, width=12, state="readonly", style="Gray.TEntry")
+        self.ent_airline_id.grid(row=0, column=1, sticky="w", padx=4, pady=4)
 
-        frm = ttk.Frame(self)
-        frm.pack(side="left", fill="y", padx=10, pady=10)
+        ttk.Label(form, text="Type").grid(row=0, column=2, sticky="e", padx=4, pady=4)
+        self.ent_airline_type = ttk.Entry(form, width=12, state="readonly", style="Gray.TEntry")
+        self.ent_airline_type.grid(row=0, column=3, sticky="w", padx=4, pady=4)
+        var = tk.StringVar(value="airline")
+        self.ent_airline_type.configure(textvariable=var)
 
-        ttk.Label(frm, text="ID").grid(row=0, column=0, sticky="w")
-        self.ent_id = ttk.Entry(frm, width=10)
-        self.ent_id.grid(row=0, column=1, sticky="w")
-        self.ent_id.configure(state="readonly")
+        ttk.Label(form, text="CompanyName").grid(row=1, column=0, sticky="e", padx=4, pady=4)
+        self.ent_company = ttk.Entry(form, width=40)
+        self.ent_company.grid(row=1, column=1, columnspan=3, sticky="w", padx=4, pady=4)
 
-        ttk.Label(frm, text="CompanyName").grid(row=1, column=0, sticky="w")
-        self.ent_name = ttk.Entry(frm, width=30)
-        self.ent_name.grid(row=1, column=1, sticky="w")
+        bar = ttk.Frame(form); bar.grid(row=2, column=0, columnspan=4, sticky="w", padx=4, pady=8)
+        ttk.Button(bar, text="Create", command=self.on_airline_create).pack(side="left", padx=4)
+        ttk.Button(bar, text="Update", command=self.on_airline_update).pack(side="left", padx=4)
+        ttk.Button(bar, text="Delete", command=self.on_airline_delete).pack(side="left", padx=4)
 
-        ttk.Button(frm, text="Create", command=self.create).grid(row=2, column=0, pady=6)
-        ttk.Button(frm, text="Update", command=self.update).grid(row=2, column=1, pady=6)
-        ttk.Button(frm, text="Delete", command=self.delete).grid(row=2, column=2, pady=6)
+        self.tree_airlines = ttk.Treeview(f, columns=("airline_id", "CompanyName"), show="headings", height=10)
+        for c, w in (("airline_id", 100), ("CompanyName", 360)):
+            self.tree_airlines.heading(c, text=c)
+            self.tree_airlines.column(c, width=w, anchor="w")
+        self.tree_airlines.pack(fill="both", expand=True, padx=8, pady=8)
+        self.tree_airlines.bind("<<TreeviewSelect>>", self.on_airline_select)
 
-        ttk.Label(frm, text="Search").grid(row=3, column=0, sticky="w")
-        self.ent_search = ttk.Entry(frm, width=30)
-        self.ent_search.grid(row=3, column=1, sticky="w")
-        ttk.Button(frm, text="Go", command=self.search).grid(row=3, column=2, sticky="w")
+    def refresh_airlines(self):
+        self.tree_airlines.delete(*self.tree_airlines.get_children())
+        for r in self.rms.airlines:
+            self.tree_airlines.insert("", "end", values=(r.get("airline_id"), r.get("CompanyName", "")))
 
-        self.list = tk.Listbox(self, width=90)
-        self.list.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-        self.list.bind("<<ListboxSelect>>", self.on_select)
-        self.refresh()
-
-    def refresh(self, rows=None):
-        rows = rows if rows is not None else self.rms.airlines
-        self.list.delete(0, tk.END)
-        for a in rows:
-            self.list.insert(tk.END, f'ID={a["ID"]}  CompanyName={a.get("CompanyName","")}')
-
-    def on_select(self, _evt):
-        cur = self.list.curselection()
-        if not cur:
+    def on_airline_select(self, _evt):
+        sel = self.tree_airlines.selection()
+        if not sel:
             return
-        text = self.list.get(cur[0])
-        aid = int(text.split()[0].split("=")[1])
-        a = self.rms.get_airline(aid)
-        if not a:
-            return
-        self.ent_id.configure(state="normal")
-        self.ent_id.delete(0, tk.END)
-        self.ent_id.insert(0, str(a["ID"]))
-        self.ent_id.configure(state="readonly")
-        self.ent_name.delete(0, tk.END)
-        self.ent_name.insert(0, a.get("CompanyName", ""))
+        vals = self.tree_airlines.item(sel[0], "values")
+        aid = int(vals[0])
+        r = self.rms._find(self.rms.airlines, "airline_id", aid) or {}
 
-    def create(self):
-        name = self.ent_name.get().strip()
-        if not name:
-            messagebox.showwarning("Input", "CompanyName required")
-            return
+        self.ent_airline_id.configure(state="normal")
+        self.ent_airline_id.delete(0, "end")
+        self.ent_airline_id.insert(0, r.get("airline_id"))
+        self.ent_airline_id.configure(state="readonly")
+
+        self.ent_company.delete(0, "end")
+        self.ent_company.insert(0, r.get("CompanyName", ""))
+
+    def on_airline_create(self):
         if not messagebox.askyesno("Confirm", "Create this airline?"):
             return
         try:
-            row = self.rms.create_airline({"Type": "airline", "CompanyName": name})
-            log.info("GUI create airline ok: %s", row)
-            self.ent_name.delete(0, tk.END)
-            self.refresh()
+            r = self.rms.create_airline({"CompanyName": self.ent_company.get().strip()})
+            messagebox.showinfo("OK", f"Created airline {r['airline_id']}")
+            self.refresh_airlines()
         except Exception as e:
-            log.exception("GUI create airline failed")
-            messagebox.showerror("Create Airline", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def update(self):
-        aid = self.ent_id.get().strip()
+    def on_airline_update(self):
+        aid = self.ent_airline_id.get().strip()
         if not aid:
-            messagebox.showwarning("Update", "Please select a row from list")
+            messagebox.showerror("Error", "No airline selected")
+            return
+        if not messagebox.askyesno("Confirm", f"Update airline {aid}?"):
             return
         try:
-            row = self.rms.update_airline(int(aid), {"CompanyName": self.ent_name.get().strip(), "Type": "airline"})
-            log.info("GUI update airline ok: %s", row)
-            self.refresh()
+            r = self.rms.update_airline(int(aid), {"CompanyName": self.ent_company.get().strip()})
+            messagebox.showinfo("OK", f"Updated airline {r['airline_id']}")
+            self.refresh_airlines()
+            self.refresh_flights()
         except Exception as e:
-            log.exception("GUI update airline failed")
-            messagebox.showerror("Update Airline", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def delete(self):
-        cur = self.list.curselection()
-        if not cur:
+    def on_airline_delete(self):
+        aid = self.ent_airline_id.get().strip()
+        if not aid:
+            messagebox.showerror("Error", "No airline selected")
             return
-        text = self.list.get(cur[0])
-        aid = int(text.split()[0].split("=")[1])
-        if not messagebox.askyesno("Confirm", f"Delete airline ID={aid}? (linked flights will be removed)"):
+        if not messagebox.askyesno("Confirm", f"Delete airline {aid} and its flights?"):
             return
         try:
-            self.rms.delete_airline(aid)
-            log.info("GUI delete airline ok: id=%s", aid)
-            self.ent_id.configure(state="normal")
-            self.ent_id.delete(0, tk.END)
-            self.ent_id.configure(state="readonly")
-            self.ent_name.delete(0, tk.END)
-            self.refresh()
+            self.rms.delete_airline(int(aid))
+            messagebox.showinfo("OK", "Deleted.")
+            self.refresh_airlines()
+            self.refresh_flights()
         except Exception as e:
-            log.exception("GUI delete airline failed")
-            messagebox.showerror("Delete Airline", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def search(self):
-        k = self.ent_search.get()
-        rows = self.rms.search_airlines(k)
-        self.refresh(rows)
+    # ==============================================
+    # Flights Tab
+    # ==============================================
+    def build_flights_tab(self):
+        f = self.tab_flights
+        form = ttk.LabelFrame(f, text="Flight Form")
+        form.pack(side="top", fill="x", padx=8, pady=8)
 
+        # 航班 ID（只读）
+        ttk.Label(form, text="Flight ID").grid(row=0, column=0, sticky="e", padx=4, pady=4)
+        self.ent_fid = ttk.Entry(form, width=12, state="readonly", style="Gray.TEntry")
+        self.ent_fid.grid(row=0, column=1, sticky="w", padx=4, pady=4)
 
-# ----------------- Flight Tab（含 ID、Update、确认） -----------------
-class FlightTab(ttk.Frame):
-    def __init__(self, parent, rms: RMS):
-        super().__init__(parent)
-        self.rms = rms
+        # Client 下拉
+        ttk.Label(form, text="Client").grid(row=1, column=0, sticky="e", padx=4, pady=4)
+        self.cmb_client = ttk.Combobox(form, width=44, values=self.rms.list_clients_combo(), state="readonly")
+        self.cmb_client.grid(row=1, column=1, columnspan=3, sticky="w", padx=4, pady=4)
 
-        frm = ttk.Frame(self)
-        frm.pack(side="left", fill="y", padx=10, pady=10)
+        # Airline 下拉
+        ttk.Label(form, text="Airline").grid(row=2, column=0, sticky="e", padx=4, pady=4)
+        self.cmb_airline = ttk.Combobox(form, width=44, values=self.rms.list_airlines_combo(), state="readonly")
+        self.cmb_airline.grid(row=2, column=1, columnspan=3, sticky="w", padx=4, pady=4)
 
-        ttk.Label(frm, text="ID").grid(row=0, column=0, sticky="w")
-        self.ent_id = ttk.Entry(frm, width=10)
-        self.ent_id.grid(row=0, column=1, sticky="w")
-        self.ent_id.configure(state="readonly")
+        # 日期下拉
+        years = [str(y) for y in range(2024, 2031)]
+        months = [f"{m:02d}" for m in range(1, 13)]
+        days = [f"{d:02d}" for d in range(1, 32)]
+        hours = [f"{h:02d}" for h in range(0, 24)]
+        minutes = [f"{m:02d}" for m in range(0, 60, 5)]
 
-        ttk.Label(frm, text="Client_ID").grid(row=1, column=0, sticky="w")
-        self.ent_cid = ttk.Entry(frm, width=10)
-        self.ent_cid.grid(row=1, column=1, sticky="w")
+        ttk.Label(form, text="Date (Y/M/D H:M)").grid(row=3, column=0, sticky="e", padx=4, pady=4)
+        self.cbY = ttk.Combobox(form, width=6, values=years, state="readonly")
+        self.cbM = ttk.Combobox(form, width=4, values=months, state="readonly")
+        self.cbD = ttk.Combobox(form, width=4, values=days, state="readonly")
+        self.cbH = ttk.Combobox(form, width=4, values=hours, state="readonly")
+        self.cbMin = ttk.Combobox(form, width=4, values=minutes, state="readonly")
+        for i, cb in enumerate([self.cbY, self.cbM, self.cbD, self.cbH, self.cbMin], start=1):
+            cb.grid(row=3, column=i, sticky="w", padx=2, pady=4)
 
-        ttk.Label(frm, text="Airline_ID").grid(row=2, column=0, sticky="w")
-        self.ent_aid = ttk.Entry(frm, width=10)
-        self.ent_aid.grid(row=2, column=1, sticky="w")
+        # 起讫城市
+        ttk.Label(form, text="StartCity").grid(row=4, column=0, sticky="e", padx=4, pady=4)
+        self.cmb_start = ttk.Combobox(form, width=20, values=self.rms.list_cities(), state="readonly")
+        self.cmb_start.grid(row=4, column=1, sticky="w", padx=4, pady=4)
+        ttk.Label(form, text="EndCity").grid(row=4, column=2, sticky="e", padx=4, pady=4)
+        self.cmb_end = ttk.Combobox(form, width=20, values=self.rms.list_cities(), state="readonly")
+        self.cmb_end.grid(row=4, column=3, sticky="w", padx=4, pady=4)
 
-        ttk.Label(frm, text="Date(YYYY-MM-DD or ISO)").grid(row=3, column=0, sticky="w")
-        self.ent_date = ttk.Entry(frm, width=20)
-        self.ent_date.grid(row=3, column=1, sticky="w")
+        # 操作按钮
+        bar = ttk.Frame(form); bar.grid(row=5, column=0, columnspan=4, sticky="w", padx=4, pady=8)
+        ttk.Button(bar, text="Create", command=self.on_flight_create).pack(side="left", padx=4)
+        ttk.Button(bar, text="Update", command=self.on_flight_update).pack(side="left", padx=4)
+        ttk.Button(bar, text="Delete", command=self.on_flight_delete).pack(side="left", padx=4)
 
-        ttk.Label(frm, text="StartCity").grid(row=4, column=0, sticky="w")
-        self.ent_sc = ttk.Entry(frm, width=18)
-        self.ent_sc.grid(row=4, column=1, sticky="w")
+        # 搜索 + 外键组合查询
+        sbar = ttk.Frame(f); sbar.pack(side="top", fill="x", padx=8, pady=4)
+        ttk.Label(sbar, text="Search by client_id / name / phone").pack(side="left")
+        self.ent_fsearch = ttk.Entry(sbar, width=36); self.ent_fsearch.pack(side="left", padx=6)
+        ttk.Button(sbar, text="Find", command=self.on_flight_search).pack(side="left", padx=4)
 
-        ttk.Label(frm, text="EndCity").grid(row=5, column=0, sticky="w")
-        self.ent_ec = ttk.Entry(frm, width=18)
-        self.ent_ec.grid(row=5, column=1, sticky="w")
+        ttk.Label(sbar, text=" | Find by client+airline").pack(side="left", padx=8)
+        self.cmb_fk_client = ttk.Combobox(sbar, width=28, values=self.rms.list_clients_combo(), state="readonly")
+        self.cmb_fk_client.pack(side="left", padx=2)
+        self.cmb_fk_airline = ttk.Combobox(sbar, width=28, values=self.rms.list_airlines_combo(), state="readonly")
+        self.cmb_fk_airline.pack(side="left", padx=2)
+        ttk.Button(sbar, text="Find by FK", command=self.on_flight_search_fk).pack(side="left", padx=4)
+        ttk.Button(sbar, text="Show All", command=self.refresh_flights).pack(side="left", padx=4)
 
-        ttk.Button(frm, text="Create", command=self.create).grid(row=6, column=0, pady=8)
-        ttk.Button(frm, text="Update", command=self.update).grid(row=6, column=1, pady=8)
-        ttk.Button(frm, text="Delete", command=self.delete).grid(row=6, column=2, pady=8)
+        # 列表
+        cols = ("ID", "ClientName", "Phone", "Airline", "Date", "StartCity", "EndCity")
+        self.tree_flights = ttk.Treeview(f, columns=cols, show="headings", height=12)
+        widths = (70, 180, 120, 160, 140, 120, 120)
+        for c, w in zip(cols, widths):
+            self.tree_flights.heading(c, text=c)
+            self.tree_flights.column(c, width=w, anchor="w")
+        self.tree_flights.pack(fill="both", expand=True, padx=8, pady=8)
+        self.tree_flights.bind("<<TreeviewSelect>>", self.on_flight_select)
 
-        self.list = tk.Listbox(self, width=100)
-        self.list.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-        self.list.bind("<<ListboxSelect>>", self.on_select)
+    # ---- flights helpers ----
+    @staticmethod
+    def _pick_id_from_combo(txt: str) -> int:
+        # "123 - Alice (138...)" -> 123
+        try:
+            if txt and "-" in txt:
+                return int(txt.split("-", 1)[0].strip())
+        except Exception:
+            pass
+        return 0
 
-        self.refresh()
+    def _collect_flight_form(self) -> dict:
+        y, m, d, h, mi = self.cbY.get(), self.cbM.get(), self.cbD.get(), self.cbH.get(), self.cbMin.get()
+        if not all([y, m, d, h, mi]):
+            raise ValueError("Please select complete date time (Y/M/D H:M)")
+        dt = f"{y}-{m}-{d} {h}:{mi}"
+        # 校验合法性
+        datetime.strptime(dt, "%Y-%m-%d %H:%M")
+        return dict(
+            client_id=self._pick_id_from_combo(self.cmb_client.get()),
+            airline_id=self._pick_id_from_combo(self.cmb_airline.get()),
+            Date=dt,
+            StartCity=self.cmb_start.get(),
+            EndCity=self.cmb_end.get(),
+            Type="flight",
+        )
 
-    def refresh(self):
-        self.list.delete(0, tk.END)
-        for f in self.rms.flights:
-            self.list.insert(
-                tk.END,
-                f'ID={f["ID"]}  Client_ID={f["Client_ID"]} Airline_ID={f["Airline_ID"]} '
-                f'Date={f.get("Date","")} {f.get("StartCity","")}->{f.get("EndCity","")}'
-            )
+    def refresh_flights(self, rows=None):
+        if rows is None:
+            # enrich for display
+            rows = []
+            for f in self.rms.flights:
+                c = self.rms._find(self.rms.clients, "client_id", int(f.get("client_id", 0))) or {}
+                a = self.rms._find(self.rms.airlines, "airline_id", int(f.get("airline_id", 0))) or {}
+                rows.append({
+                    "ID": f.get("ID"),
+                    "ClientName": c.get("Name", ""),
+                    "Phone": c.get("Phone", ""),
+                    "Airline": a.get("CompanyName", ""),
+                    "Date": f.get("Date", ""),
+                    "StartCity": f.get("StartCity", ""),
+                    "EndCity": f.get("EndCity", ""),
+                })
+        self.tree_flights.delete(*self.tree_flights.get_children())
+        for r in rows:
+            self.tree_flights.insert("", "end", values=(r["ID"], r["ClientName"], r["Phone"],
+                                                       r["Airline"], r["Date"], r["StartCity"], r["EndCity"]))
 
-    def on_select(self, _evt):
-        cur = self.list.curselection()
-        if not cur:
+        # 更新下拉（防止新建/删除后列表不刷新）
+        self.cmb_client.configure(values=self.rms.list_clients_combo())
+        self.cmb_fk_client.configure(values=self.rms.list_clients_combo())
+        self.cmb_airline.configure(values=self.rms.list_airlines_combo())
+        self.cmb_fk_airline.configure(values=self.rms.list_airlines_combo())
+
+    def on_flight_select(self, _evt):
+        sel = self.tree_flights.selection()
+        if not sel:
             return
-        text = self.list.get(cur[0])
-        fid = int(text.split()[0].split("=")[1])
-        f = self.rms.get_flight(fid)
-        if not f:
-            return
-        self.ent_id.configure(state="normal")
-        self.ent_id.delete(0, tk.END)
-        self.ent_id.insert(0, str(f["ID"]))
-        self.ent_id.configure(state="readonly")
-        self.ent_cid.delete(0, tk.END)
-        self.ent_cid.insert(0, str(f["Client_ID"]))
-        self.ent_aid.delete(0, tk.END)
-        self.ent_aid.insert(0, str(f["Airline_ID"]))
-        self.ent_date.delete(0, tk.END)
-        self.ent_date.insert(0, f.get("Date", ""))
-        self.ent_sc.delete(0, tk.END)
-        self.ent_sc.insert(0, f.get("StartCity", ""))
-        self.ent_ec.delete(0, tk.END)
-        self.ent_ec.insert(0, f.get("EndCity", ""))
+        fid = int(self.tree_flights.item(sel[0], "values")[0])
+        row = self.rms._find(self.rms.flights, "ID", fid) or {}
 
-    def _collect(self) -> dict:
-        return {
-            "Client_ID": int(self.ent_cid.get().strip()),
-            "Airline_ID": int(self.ent_aid.get().strip()),
-            "Date": self.ent_date.get().strip(),
-            "StartCity": self.ent_sc.get().strip(),
-            "EndCity": self.ent_ec.get().strip(),
-        }
+        self.ent_fid.configure(state="normal")
+        self.ent_fid.delete(0, "end")
+        self.ent_fid.insert(0, row.get("ID"))
+        self.ent_fid.configure(state="readonly")
 
-    def _clear(self):
-        self.ent_id.configure(state="normal")
-        self.ent_id.delete(0, tk.END)
-        self.ent_id.configure(state="readonly")
-        for e in (self.ent_cid, self.ent_aid, self.ent_date, self.ent_sc, self.ent_ec):
-            e.delete(0, tk.END)
+        # 还原 form
+        c = self.rms._find(self.rms.clients, "client_id", int(row.get("client_id", 0))) or {}
+        a = self.rms._find(self.rms.airlines, "airline_id", int(row.get("airline_id", 0))) or {}
+        if c:
+            self.cmb_client.set(f'{c["client_id"]} - {c.get("Name","")} ({c.get("Phone","")})')
+        if a:
+            self.cmb_airline.set(f'{a["airline_id"]} - {a.get("CompanyName","")}')
 
-    def create(self):
+        dt = row.get("Date", "2025-01-01 00:00")
+        try:
+            ymd, hm = dt.split(" ")
+            y, m, d = ymd.split("-")
+            h, mi = hm.split(":")
+            self.cbY.set(y); self.cbM.set(m); self.cbD.set(d); self.cbH.set(h); self.cbMin.set(mi)
+        except Exception:
+            pass
+        self.cmb_start.set(row.get("StartCity", ""))
+        self.cmb_end.set(row.get("EndCity", ""))
+
+    def on_flight_create(self):
         if not messagebox.askyesno("Confirm", "Create this flight?"):
             return
         try:
-            row = self.rms.create_flight(self._collect())
-            log.info("GUI create flight ok: %s", row)
-            self._clear()
-            self.refresh()
+            data = self._collect_flight_form()
+            f = self.rms.create_flight(data)
+            messagebox.showinfo("OK", f"Created flight {f['ID']}")
+            self.refresh_flights()
         except Exception as e:
-            log.exception("GUI create flight failed")
-            messagebox.showerror("Create Flight", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def update(self):
-        fid = self.ent_id.get().strip()
+    def on_flight_update(self):
+        fid = self.ent_fid.get().strip()
         if not fid:
-            messagebox.showwarning("Update", "Please select a row from list")
+            messagebox.showerror("Error", "No flight selected")
+            return
+        if not messagebox.askyesno("Confirm", f"Update flight {fid}?"):
             return
         try:
-            row = self.rms.update_flight(int(fid), self._collect())
-            log.info("GUI update flight ok: %s", row)
-            self.refresh()
+            data = self._collect_flight_form()
+            f = self.rms.update_flight(int(fid), data)
+            messagebox.showinfo("OK", f"Updated flight {f['ID']}")
+            self.refresh_flights()
         except Exception as e:
-            log.exception("GUI update flight failed")
-            messagebox.showerror("Update Flight", str(e))
+            messagebox.showerror("Error", str(e))
 
-    def delete(self):
-        cur = self.list.curselection()
-        if not cur:
+    def on_flight_delete(self):
+        fid = self.ent_fid.get().strip()
+        if not fid:
+            messagebox.showerror("Error", "No flight selected")
             return
-        text = self.list.get(cur[0])
-        fid = int(text.split()[0].split("=")[1])
-        if not messagebox.askyesno("Confirm", f"Delete flight ID={fid}?"):
+        if not messagebox.askyesno("Confirm", f"Delete flight {fid}?"):
             return
         try:
-            self.rms.delete_flight(fid)
-            log.info("GUI delete flight ok: id=%s", fid)
-            self._clear()
-            self.refresh()
+            self.rms.delete_flight(int(fid))
+            messagebox.showinfo("OK", "Deleted.")
+            self.refresh_flights()
         except Exception as e:
-            log.exception("GUI delete flight failed")
-            messagebox.showerror("Delete Flight", str(e))
+            messagebox.showerror("Error", str(e))
+
+    def on_flight_search(self):
+        q = self.ent_fsearch.get().strip()
+        rows = self.rms.search_flights(q)
+        self.refresh_flights(rows)
+
+    def on_flight_search_fk(self):
+        cid = self._pick_id_from_combo(self.cmb_fk_client.get())
+        aid = self._pick_id_from_combo(self.cmb_fk_airline.get())
+        if cid <= 0 or aid <= 0:
+            messagebox.showerror("Error", "Please pick both Client and Airline")
+            return
+        rows = self.rms.search_flights_by_fk(cid, aid)
+        # rows 为原始 flights 增强结构，直接转显示结构
+        disp = [{
+            "ID": r["ID"],
+            "ClientName": r.get("ClientName", ""),
+            "Phone": r.get("Phone", ""),
+            "Airline": r.get("Airline", ""),
+            "Date": r.get("Date", ""),
+            "StartCity": r.get("StartCity", ""),
+            "EndCity": r.get("EndCity", "")
+        } for r in rows]
+        self.refresh_flights(disp)
 
 
 if __name__ == "__main__":
