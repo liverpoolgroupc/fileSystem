@@ -1,191 +1,242 @@
 # services.py
+from typing import Dict, List, Optional, Tuple
 import logging
-from typing import Dict, List, Optional
+
 from models import Client, Airline, Flight
 from storage import JsonlStorage
 
 log = logging.getLogger(__name__)
 
+# 下拉“城市/国家”目录
+CITY_CATALOG = [
+    "New York", "San Francisco", "Los Angeles",
+    "Tokyo", "Osaka",
+    "Beijing", "Shanghai", "Shenzhen",
+    "London", "Paris"
+]
+COUNTRY_CATALOG = ["US", "JP", "CN", "UK", "FR", "DE", "CA", "AU", "SG", "KR"]
+
+REQUIRED_CLIENT_FIELDS = ("Name", "Address1", "City", "State", "Zip", "Country", "Phone")
+
 
 class RMS:
-    def __init__(self, storage: Optional[JsonlStorage] = None, autosave: bool = True):
-        self.storage = storage or JsonlStorage()
-        self.autosave = autosave
-        data = self.storage.load_all()
-        self.clients: List[dict] = data["clients"]
-        self.airlines: List[dict] = data["airlines"]
-        self.flights: List[dict] = data["flights"]
-        log.info("RMS initialized: clients=%d, airlines=%d, flights=%d",
-                 len(self.clients), len(self.airlines), len(self.flights))
+    def __init__(self, storage: Optional[JsonlStorage] = None):
+        self.st = storage or JsonlStorage()
+        data = self.st.load_all()
+        self.clients: List[dict] = data.get("clients", [])
+        self.airlines: List[dict] = data.get("airlines", [])
+        self.flights: List[dict] = data.get("flights", [])
 
-    # ---------- 工具 ----------
-    @staticmethod
-    def _next_id(items: List[dict], key: str = "ID") -> int:
-        max_id = 0
-        for r in items:
+    # ---------- 公共小工具 ----------
+    def _next_id(self, rows: List[dict], key: str) -> int:
+        n = 1
+        for r in rows:
             try:
-                max_id = max(max_id, int(r.get(key, 0)))
+                n = max(n, int(r.get(key, 0)) + 1)
             except Exception:
                 pass
-        return max_id + 1
+        return n
 
-    @staticmethod
-    def _find(items: List[dict], key: str, value) -> Optional[dict]:
-        return next((r for r in items if r.get(key) == value), None)
+    def _find(self, rows: List[dict], key: str, val: int) -> Optional[dict]:
+        for r in rows:
+            try:
+                if int(r.get(key, -1)) == int(val):
+                    return r
+            except Exception:
+                pass
+        return None
+
+    def _index_of(self, rows: List[dict], key: str, val: int) -> Tuple[int, Optional[dict]]:
+        for i, r in enumerate(rows):
+            try:
+                if int(r.get(key, -1)) == int(val):
+                    return i, r
+            except Exception:
+                pass
+        return -1, None
 
     def _maybe_save(self):
-        if self.autosave:
-            self.save()
+        self.st.write_clients(self.clients)
+        self.st.write_airlines(self.airlines)
+        self.st.write_flights(self.flights)
 
-    # ---------- Client ----------
-    def create_client(self, d: Dict) -> dict:
-        new_id = d.get("ID") or self._next_id(self.clients)
-        c = Client.from_dict({"ID": new_id, **d})
-        if self._find(self.clients, "ID", c.ID):
-            log.error("Create client failed: duplicate ID=%s", c.ID)
-            raise ValueError("Client ID already exists")
-        row = c.to_dict()
-        self.clients.append(row)
-        log.info("Client created: %s", row)
+    # ---------- 下拉数据 ----------
+    def list_cities(self) -> List[str]:
+        return CITY_CATALOG
+
+    def list_countries(self) -> List[str]:
+        return COUNTER_CATALOG if (COUNTER_CATALOG := COUNTRY_CATALOG) else COUNTRY_CATALOG
+
+    def list_clients_combo(self) -> List[str]:
+        # "client_id - Name (Phone)"
+        return [f'{c["client_id"]} - {c.get("Name","")} ({c.get("Phone","")})' for c in self.clients]
+
+    def list_airlines_combo(self) -> List[str]:
+        return [f'{a["airline_id"]} - {a.get("CompanyName","")}' for a in self.airlines]
+
+    # ---------- 客户 ----------
+    def _validate_client_required(self, data: Dict):
+        miss = [k for k in REQUIRED_CLIENT_FIELDS if not str(data.get(k, "")).strip()]
+        if miss:
+            raise ValueError("Missing required fields: " + ", ".join(miss))
+
+    def create_client(self, data: Dict) -> Dict:
+        data["Type"] = "client"
+        self._validate_client_required(data)
+        new_id = self._next_id(self.clients, "client_id")
+        c = Client(client_id=new_id, **{k: v for k, v in data.items() if k != "client_id"})
+        self.clients.append(c.to_dict())
         self._maybe_save()
-        return row
+        log.info("Create client: %s", c.to_dict())
+        return c.to_dict()
 
-    def update_client(self, client_id: int, d: Dict) -> dict:
-        r = self._find(self.clients, "ID", client_id)
-        if not r:
-            log.error("Update client failed: not found ID=%s", client_id)
-            raise KeyError("Client not found")
-        before = dict(r)
-        r.update(Client.from_dict({**r, **d, "ID": client_id}).to_dict())
-        log.info("Client updated: id=%s before=%s after=%s", client_id, before, r)
+    def update_client(self, client_id: int, patch: Dict) -> Dict:
+        idx, row = self._index_of(self.clients, "client_id", client_id)
+        if row is None:
+            raise KeyError(f"Client {client_id} not found")
+        merged = {**row, **patch, "Type": "client", "client_id": client_id}
+        self._validate_client_required(merged)
+        self.clients[idx] = merged
         self._maybe_save()
-        return r
+        log.info("Update client %s -> %s", client_id, merged)
+        return merged
 
-    def delete_client(self, client_id: int) -> None:
-        cnt_before = len(self.clients)
-        self.clients[:] = [r for r in self.clients if r["ID"] != client_id]
-        flights_before = len(self.flights)
-        self.flights[:] = [f for f in self.flights if f["Client_ID"] != client_id]
-        log.info("Client deleted: id=%s (clients %d->%d, flights %d->%d)",
-                 client_id, cnt_before, len(self.clients), flights_before, len(self.flights))
+    def delete_client(self, client_id: int):
+        idx, row = self._index_of(self.clients, "client_id", client_id)
+        if row is None:
+            raise KeyError(f"Client {client_id} not found")
+        # 同时删除其名下的航班
+        self.clients.pop(idx)
+        self.flights = [f for f in self.flights if int(f.get("client_id", 0)) != int(client_id)]
         self._maybe_save()
+        log.info("Delete client %s", client_id)
 
-    def get_client(self, client_id: int) -> Optional[dict]:
-        return self._find(self.clients, "ID", client_id)
+    def search_clients(self, q: str) -> List[Dict]:
+        q = (q or "").strip().lower()
+        if not q:
+            return []
+        out: List[Dict] = []
+        for r in self.clients:
+            if q.isdigit() and int(q) == int(r.get("client_id", 0)):
+                out.append(r); continue
+            if q in str(r.get("Phone", "")).lower() or q in str(r.get("Name", "")).lower():
+                out.append(r)
+        return out
 
-    def search_clients(self, keyword: str) -> List[dict]:
-        k = (keyword or "").lower().strip()
-        res = [c for c in self.clients if k in c.get("Name", "").lower()]
-        log.info("Search clients: key=%r -> %d rows", keyword, len(res))
-        return res
-
-    # ---------- Airline ----------
-    def create_airline(self, d: Dict) -> dict:
-        new_id = d.get("ID") or self._next_id(self.airlines)
-        a = Airline.from_dict({"ID": new_id, **d})
-        if self._find(self.airlines, "ID", a.ID):
-            log.error("Create airline failed: duplicate ID=%s", a.ID)
-            raise ValueError("Airline ID already exists")
-        row = a.to_dict()
-        self.airlines.append(row)
-        log.info("Airline created: %s", row)
+    # ---------- 航空公司 ----------
+    def create_airline(self, data: Dict) -> Dict:
+        data["Type"] = "airline"
+        new_id = self._next_id(self.airlines, "airline_id")
+        a = Airline(airline_id=new_id, **{k: v for k, v in data.items() if k != "airline_id"})
+        self.airlines.append(a.to_dict())
         self._maybe_save()
-        return row
+        log.info("Create airline: %s", a.to_dict())
+        return a.to_dict()
 
-    def update_airline(self, airline_id: int, d: Dict) -> dict:
-        r = self._find(self.airlines, "ID", airline_id)
-        if not r:
-            log.error("Update airline failed: not found ID=%s", airline_id)
-            raise KeyError("Airline not found")
-        before = dict(r)
-        r.update(Airline.from_dict({**r, **d, "ID": airline_id}).to_dict())
-        log.info("Airline updated: id=%s before=%s after=%s", airline_id, before, r)
+    def update_airline(self, airline_id: int, patch: Dict) -> Dict:
+        idx, row = self._index_of(self.airlines, "airline_id", airline_id)
+        if row is None:
+            raise KeyError(f"Airline {airline_id} not found")
+        merged = {**row, **patch, "Type": "airline", "airline_id": airline_id}
+        self.airlines[idx] = merged
         self._maybe_save()
-        return r
+        log.info("Update airline %s -> %s", airline_id, merged)
+        return merged
 
-    def delete_airline(self, airline_id: int) -> None:
-        cnt_before = len(self.airlines)
-        self.airlines[:] = [r for r in self.airlines if r["ID"] != airline_id]
-        flights_before = len(self.flights)
-        self.flights[:] = [f for f in self.flights if f["Airline_ID"] != airline_id]
-        log.info("Airline deleted: id=%s (airlines %d->%d, flights %d->%d)",
-                 airline_id, cnt_before, len(self.airlines), flights_before, len(self.flights))
+    def delete_airline(self, airline_id: int):
+        idx, row = self._index_of(self.airlines, "airline_id", airline_id)
+        if row is None:
+            raise KeyError(f"Airline {airline_id} not found")
+        self.airlines.pop(idx)
+        self.flights = [f for f in self.flights if int(f.get("airline_id", 0)) != int(airline_id)]
         self._maybe_save()
+        log.info("Delete airline %s", airline_id)
 
-    def get_airline(self, airline_id: int) -> Optional[dict]:
-        return self._find(self.airlines, "ID", airline_id)
+    # ---------- 航班 ----------
+    def _check_fk(self, client_id: int, airline_id: int):
+        if not self._find(self.clients, "client_id", client_id):
+            raise ValueError(f"client_id {client_id} not found")
+        if not self._find(self.airlines, "airline_id", airline_id):
+            raise ValueError(f"airline_id {airline_id} not found")
 
-    def search_airlines(self, keyword: str) -> List[dict]:
-        k = (keyword or "").lower().strip()
-        res = [a for a in self.airlines if k in a.get("CompanyName", "").lower()]
-        log.info("Search airlines: key=%r -> %d rows", keyword, len(res))
-        return res
-
-    # ---------- Flight ----------
-    def create_flight(self, d: Dict) -> dict:
-        # 外键校验
-        client_id = int(d["Client_ID"])
-        airline_id = int(d["Airline_ID"])
-        c = self.get_client(client_id)
-        if not c:
-            log.error("Create flight failed: Client_ID=%s not exists", client_id)
-            raise ValueError("Client_ID does not exist")
-        a = self.get_airline(airline_id)
-        if not a:
-            log.error("Create flight failed: Airline_ID=%s not exists", airline_id)
-            raise ValueError("Airline_ID does not exist")
-
-        new_id = d.get("ID") or self._next_id(self.flights, "ID")
-        f = Flight.from_dict({"ID": new_id, **d})
-        row = f.to_dict()
-        self.flights.append(row)
-        log.info("Flight created: %s (linked Client: %s, Airline: %s)",
-                 row, c.get("Name"), a.get("CompanyName"))
+    def create_flight(self, data: Dict) -> Dict:
+        data["Type"] = "flight"
+        self._check_fk(int(data["client_id"]), int(data["airline_id"]))
+        new_id = self._next_id(self.flights, "ID")
+        f = Flight(ID=new_id, **{k: v for k, v in data.items() if k != "ID"})
+        self.flights.append(f.to_dict())
         self._maybe_save()
-        return row
+        log.info("Create flight: %s", f.to_dict())
+        return f.to_dict()
 
-    def update_flight(self, flight_id: int, d: Dict) -> dict:
-        r = self._find(self.flights, "ID", flight_id)
-        if not r:
-            log.error("Update flight failed: not found ID=%s", flight_id)
-            raise KeyError("Flight not found")
-        # 如果改了外键则重新校验
-        cid = int(d.get("Client_ID", r["Client_ID"]))
-        aid = int(d.get("Airline_ID", r["Airline_ID"]))
-        if not self.get_client(cid):
-            log.error("Update flight failed: Client_ID=%s not exists", cid)
-            raise ValueError("Client_ID does not exist")
-        if not self.get_airline(aid):
-            log.error("Update flight failed: Airline_ID=%s not exists", aid)
-            raise ValueError("Airline_ID does not exist")
-
-        before = dict(r)
-        r.update(Flight.from_dict({**r, **d, "ID": flight_id,
-                                   "Client_ID": cid, "Airline_ID": aid}).to_dict())
-        log.info("Flight updated: id=%s before=%s after=%s", flight_id, before, r)
+    def update_flight(self, flight_id: int, patch: Dict) -> Dict:
+        idx, row = self._index_of(self.flights, "ID", flight_id)
+        if row is None:
+            raise KeyError(f"Flight {flight_id} not found")
+        merged = {**row, **patch, "Type": "flight", "ID": flight_id}
+        self._check_fk(int(merged["client_id"]), int(merged["airline_id"]))
+        self.flights[idx] = merged
         self._maybe_save()
-        return r
+        log.info("Update flight %s -> %s", flight_id, merged)
+        return merged
 
-    def delete_flight(self, flight_id: int) -> None:
-        before = len(self.flights)
-        removed = self._find(self.flights, "ID", flight_id)
-        if not removed:
-            log.error("Delete flight failed: id=%s not found", flight_id)
-            raise KeyError("Flight not found")
-        self.flights[:] = [f for f in self.flights if f["ID"] != flight_id]
-        log.info("Flight deleted: id=%s (flights %d->%d) row=%s",
-                 flight_id, before, len(self.flights), removed)
+    def delete_flight(self, flight_id: int):
+        idx, row = self._index_of(self.flights, "ID", flight_id)
+        if row is None:
+            raise KeyError(f"Flight {flight_id} not found")
+        self.flights.pop(idx)
         self._maybe_save()
+        log.info("Delete flight %s", flight_id)
 
-    def get_flight(self, flight_id: int) -> Optional[dict]:
-        return self._find(self.flights, "ID", flight_id)
+    # ---------- 航班查询 ----------
+    def search_flights_by_client(self, client_id: int) -> List[Dict]:
+        out: List[Dict] = []
+        for f in self.flights:
+            if int(f.get("client_id", 0)) != int(client_id):
+                continue
+            enr = dict(f)
+            c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
+            a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
+            enr["ClientName"] = c.get("Name", "")
+            enr["Phone"] = c.get("Phone", "")
+            enr["Airline"] = a.get("CompanyName", "")
+            out.append(enr)
+        return out
 
-    # ---------- 保存 ----------
-    def save(self) -> None:
-        self.storage.save_all({
-            "clients": self.clients,
-            "airlines": self.airlines,
-            "flights": self.flights
-        })
-        log.info("Saved to disk: clients=%d airlines=%d flights=%d",
-                 len(self.clients), len(self.airlines), len(self.flights))
+    def search_flights(self, q: str) -> List[Dict]:
+        q = (q or "").strip().lower()
+        if not q:
+            return []
+        # 先找出匹配客户
+        matched = []
+        for c in self.clients:
+            if q.isdigit() and int(q) == int(c.get("client_id", 0)):
+                matched.append(c); continue
+            if q in c.get("Name", "").lower() or q in c.get("Phone", "").lower():
+                matched.append(c)
+        ids = {int(c["client_id"]) for c in matched}
+        out: List[Dict] = []
+        for f in self.flights:
+            if int(f.get("client_id", 0)) not in ids:
+                continue
+            enr = dict(f)
+            a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
+            c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
+            enr["ClientName"] = c.get("Name", "")
+            enr["Phone"] = c.get("Phone", "")
+            enr["Airline"] = a.get("CompanyName", "")
+            out.append(enr)
+        return out
+
+    def search_flights_by_fk(self, client_id: int, airline_id: int) -> List[Dict]:
+        out: List[Dict] = []
+        for f in self.flights:
+            if int(f.get("client_id", 0)) == int(client_id) and int(f.get("airline_id", 0)) == int(airline_id):
+                enr = dict(f)
+                a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
+                c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
+                enr["ClientName"] = c.get("Name", "")
+                enr["Phone"] = c.get("Phone", "")
+                enr["Airline"] = a.get("CompanyName", "")
+                out.append(enr)
+        return out

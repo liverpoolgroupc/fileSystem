@@ -1,9 +1,9 @@
 # storage.py
-from __future__ import annotations
-
+import io
 import json
 import logging
-from pathlib import Path
+import os
+import tempfile
 from typing import Dict, List
 
 log = logging.getLogger(__name__)
@@ -11,96 +11,104 @@ log = logging.getLogger(__name__)
 
 class JsonlStorage:
     """
-    简单 JSONLines 存储：
-      - data/clients.jsonl
-      - data/airlines.jsonl
-      - data/flights.jsonl
-    提供：
-      - load_all()  -> {"clients": [...], "airlines": [...], "flights": [...]}
-      - save_all(d) -> 覆盖写入三份文件（原子写，避免中途损坏）
-    额外：
-      - 自动迁移：若历史 flights 记录缺少 ID，会在 load 时补齐递增 ID 并落盘。
+    简单 JSONL 存储。提供：
+      - 原子写
+      - 启动时一次性迁移老字段：
+        clients: ID -> client_id
+        airlines: ID -> airline_id
+        flights: Client_ID/Airline_ID -> client_id/airline_id；无 ID 时补发
     """
 
-    def __init__(self, root: str | Path = "data"):
-        self.root = Path(root)
-        self.root.mkdir(parents=True, exist_ok=True)
-        self.clients_path = self.root / "clients.jsonl"
-        self.airlines_path = self.root / "airlines.jsonl"
-        self.flights_path = self.root / "flights.jsonl"
+    def __init__(self, root="data"):
+        self.root = root
+        os.makedirs(self.root, exist_ok=True)
+        self.clients_path = os.path.join(self.root, "clients.jsonl")
+        self.airlines_path = os.path.join(self.root, "airlines.jsonl")
+        self.flights_path = os.path.join(self.root, "flights.jsonl")
 
-        # 确保文件存在
-        for p in (self.clients_path, self.airlines_path, self.flights_path):
-            if not p.exists():
-                p.write_text("", encoding="utf-8")
-        log.info("JsonlStorage initialized at %s", self.root.resolve())
+    # --------------------- 基础 I/O ---------------------
+    def _read_jsonl(self, path: str) -> List[dict]:
+        if not os.path.exists(path):
+            return []
+        out: List[dict] = []
+        with io.open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    out.append(json.loads(line))
+                except Exception as e:
+                    log.warning("Bad jsonl line in %s: %s", path, e)
+        return out
 
-    # ----------------- 公共 API -----------------
+    def _write_jsonl_atomic(self, path: str, rows: List[dict]):
+        tmp_fd, tmp_path = tempfile.mkstemp(prefix=".tmp_", dir=self.root)
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        os.replace(tmp_path, path)
 
+    # --------------------- 读取 + 迁移 ---------------------
     def load_all(self) -> Dict[str, List[dict]]:
         clients = self._read_jsonl(self.clients_path)
         airlines = self._read_jsonl(self.airlines_path)
         flights = self._read_jsonl(self.flights_path)
 
-        # 迁移：给没有 ID 的旧 flight 记录补 ID（与我们新版 Flight.ID 保持一致）
-        changed = False
-        next_id = 1
-        # 先找已有最大 ID
+        migrated = False
+
+        # clients: ID -> client_id
+        for c in clients:
+            if "client_id" not in c and "ID" in c:
+                c["client_id"] = c.pop("ID")
+                migrated = True
+            c.setdefault("Type", "client")
+
+        # airlines: ID -> airline_id
+        for a in airlines:
+            if "airline_id" not in a and "ID" in a:
+                a["airline_id"] = a.pop("ID")
+                migrated = True
+            a.setdefault("Type", "airline")
+
+        # flights: Client_ID/Airline_ID -> client_id/airline_id；无 ID 补
+        next_fid = 1
         for f in flights:
-            try:
-                next_id = max(next_id, int(f.get("ID", 0)) + 1)
-            except Exception:
-                pass
+            if "Client_ID" in f and "client_id" not in f:
+                f["client_id"] = f.pop("Client_ID")
+                migrated = True
+            if "Airline_ID" in f and "airline_id" not in f:
+                f["airline_id"] = f.pop("Airline_ID")
+                migrated = True
+            f.setdefault("Type", "flight")
+            if "ID" in f:
+                try:
+                    next_fid = max(next_fid, int(f["ID"]) + 1)
+                except Exception:
+                    pass
 
         for f in flights:
             if "ID" not in f:
-                f["ID"] = next_id
-                next_id += 1
-                changed = True
+                f["ID"] = next_fid
+                next_fid += 1
+                migrated = True
 
-        if changed:
-            log.warning("Migrated flights: missing ID assigned; saving back to disk")
+        if migrated:
+            log.warning("JsonlStorage: migrated legacy fields -> new schema")
+            self._write_jsonl_atomic(self.clients_path, clients)
+            self._write_jsonl_atomic(self.airlines_path, airlines)
             self._write_jsonl_atomic(self.flights_path, flights)
 
         log.info("Loaded: clients=%d airlines=%d flights=%d",
                  len(clients), len(airlines), len(flights))
         return {"clients": clients, "airlines": airlines, "flights": flights}
 
-    def save_all(self, data: Dict[str, List[dict]]) -> None:
-        self._write_jsonl_atomic(self.clients_path, data.get("clients", []))
-        self._write_jsonl_atomic(self.airlines_path, data.get("airlines", []))
-        self._write_jsonl_atomic(self.flights_path, data.get("flights", []))
-        log.info("Saved: clients=%d airlines=%d flights=%d",
-                 len(data.get("clients", [])),
-                 len(data.get("airlines", [])),
-                 len(data.get("flights", [])))
+    # --------------------- 单表写入 ---------------------
+    def write_clients(self, rows: List[dict]):
+        self._write_jsonl_atomic(self.clients_path, rows)
 
-    # ----------------- 内部工具 -----------------
+    def write_airlines(self, rows: List[dict]):
+        self._write_jsonl_atomic(self.airlines_path, rows)
 
-    @staticmethod
-    def _read_jsonl(path: Path) -> List[dict]:
-        rows: List[dict] = []
-        if not path.exists():
-            return rows
-        with path.open("r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rows.append(json.loads(line))
-                except Exception as e:
-                    log.error("Bad JSON line in %s: %r (%s)", path, line, e)
-        return rows
-
-    @staticmethod
-    def _write_jsonl_atomic(path: Path, rows: List[dict]) -> None:
-        """
-        原子写：先写到 .tmp，再 replace 到目标文件，避免中途崩溃损坏。
-        """
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        with tmp.open("w", encoding="utf-8", newline="\n") as f:
-            for r in rows:
-                f.write(json.dumps(r, ensure_ascii=False))
-                f.write("\n")
-        tmp.replace(path)
+    def write_flights(self, rows: List[dict]):
+        self._write_jsonl_atomic(self.flights_path, rows)
