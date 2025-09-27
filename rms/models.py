@@ -38,7 +38,7 @@ class Client:
             Phone=_strip(d.get("Phone", "")),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self):
         d = asdict(self)
         d["Type"] = "client"
         return d
@@ -58,7 +58,7 @@ class Airline:
             CompanyName=_strip(d.get("CompanyName", "")),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self):
         d = asdict(self)
         d["Type"] = "airline"
         return d
@@ -66,24 +66,24 @@ class Airline:
 
 @dataclass
 class Flight:
+    ID: int
     Client_ID: int
     Airline_ID: int
-    Date: str  # ISO8601
+    Date: str
     StartCity: str
     EndCity: str
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "Flight":
-        # 验证/规范化日期
         date_str = _strip(d.get("Date", ""))
         if date_str:
-            # 允许 yyyy-mm-dd 或完整 ISO8601
             try:
                 dt = datetime.fromisoformat(date_str)
             except ValueError:
                 dt = datetime.strptime(date_str, "%Y-%m-%d")
             date_str = dt.isoformat()
         return Flight(
+            ID=int(d["ID"]),
             Client_ID=int(d["Client_ID"]),
             Airline_ID=int(d["Airline_ID"]),
             Date=date_str,
@@ -91,8 +91,9 @@ class Flight:
             EndCity=_strip(d.get("EndCity", "")),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self):
         return {
+            "ID": int(self.ID),
             "Client_ID": int(self.Client_ID),
             "Airline_ID": int(self.Airline_ID),
             "Date": self.Date,
