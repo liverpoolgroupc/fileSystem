@@ -57,7 +57,7 @@ class RMS:
         return CITY_CATALOG
 
     def list_countries(self) -> List[str]:
-        return COUNTRY_CATALOG
+        return sorted(COUNTRY_CATALOG)
 
     def list_cities_by_country(self, country: str) -> List[str]:
         return COUNTRY_TO_CITIES.get(country, [])
