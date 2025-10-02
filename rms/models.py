@@ -34,3 +34,20 @@ class Airline:
         d = asdict(self)
         d["Type"] = "airline"
         return d
+    
+    
+@dataclass
+class Flight:
+    """flights：ID as identifier，client_id/airline_id as foreign key"""
+    ID: int
+    Type: str = field(default="flight")
+    client_id: int = 0
+    airline_id: int = 0
+    Date: str = ""        # "YYYY-MM-DD HH:MM"
+    StartCity: str = ""
+    EndCity: str = ""
+
+    def to_dict(self) -> Dict:
+        d = asdict(self)
+        d["Type"] = "flight"
+        return d
