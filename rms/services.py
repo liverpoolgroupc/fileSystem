@@ -1,0 +1,237 @@
+from typing import Dict, List, Optional, Tuple
+import logging
+from datetime import datetime
+
+from models import Client, Airline, Flight
+from storage import JsonlStorage
+from catalogs import COUNTRY_CATALOG, CITY_CATALOG, COUNTRY_TO_CITIES
+
+log = logging.getLogger(__name__)
+
+REQUIRED_CLIENT_FIELDS = ("Name", "Address1", "City", "State", "Zip", "Country", "Phone")
+
+
+class RMS:
+    def __init__(self, storage: Optional[JsonlStorage] = None):
+        self.st = storage or JsonlStorage()
+        data = self.st.load_all()
+        self.clients: List[dict] = data.get("clients", [])
+        self.airlines: List[dict] = data.get("airlines", [])
+        self.flights: List[dict] = data.get("flights", [])
+
+    # ----------common tools ----------
+    def _next_id(self, rows: List[dict], key: str) -> int:
+        n = 1
+        for r in rows:
+            try:
+                n = max(n, int(r.get(key, 0)) + 1)
+            except Exception:
+                pass
+        return n
+
+    def _find(self, rows: List[dict], key: str, val: int) -> Optional[dict]:
+        for r in rows:
+            try:
+                if int(r.get(key, -1)) == int(val):
+                    return r
+            except Exception:
+                pass
+        return None
+
+    def _index_of(self, rows: List[dict], key: str, val: int) -> Tuple[int, Optional[dict]]:
+        for i, r in enumerate(rows):
+            try:
+                if int(r.get(key, -1)) == int(val):
+                    return i, r
+            except Exception:
+                pass
+        return -1, None
+
+    def _maybe_save(self):
+        self.st.write_clients(self.clients)
+        self.st.write_airlines(self.airlines)
+        self.st.write_flights(self.flights)
+
+    # ----------list citys ----------
+    def list_cities(self) -> List[str]:
+        return CITY_CATALOG
+
+    def list_countries(self) -> List[str]:
+        return sorted(COUNTRY_CATALOG)
+
+    def list_cities_by_country(self, country: str) -> List[str]:
+        return COUNTRY_TO_CITIES.get(country, [])
+
+    def list_clients_combo(self) -> List[str]:
+        # "client_id - Name (Phone)"
+        return [f'{c["client_id"]} - {c.get("Name","")} ({c.get("Phone","")})' for c in self.clients]
+
+    def list_airlines_combo(self) -> List[str]:
+        return [f'{a["airline_id"]} - {a.get("CompanyName","")}' for a in self.airlines]
+
+    # ----------client ----------
+    def _validate_client_required(self, data: Dict):
+        miss = [k for k in REQUIRED_CLIENT_FIELDS if not str(data.get(k, "")).strip()]
+        if miss:
+            raise ValueError("Missing required fields: " + ", ".join(miss))
+
+    def create_client(self, data: Dict) -> Dict:
+        data["Type"] = "client"
+        self._validate_client_required(data)
+        new_id = self._next_id(self.clients, "client_id")
+        c = Client(client_id=new_id, **{k: v for k, v in data.items() if k != "client_id"})
+        self.clients.append(c.to_dict())
+        self._maybe_save()
+        log.info("Create client: %s", c.to_dict())
+        return c.to_dict()
+
+    def update_client(self, client_id: int, patch: Dict) -> Dict:
+        idx, row = self._index_of(self.clients, "client_id", client_id)
+        if row is None:
+            raise KeyError(f"Client {client_id} not found")
+        merged = {**row, **patch, "Type": "client", "client_id": client_id}
+        self._validate_client_required(merged)
+        self.clients[idx] = merged
+        self._maybe_save()
+        log.info("Update client %s -> %s", client_id, merged)
+        return merged
+
+    def delete_client(self, client_id: int):
+        idx, row = self._index_of(self.clients, "client_id", client_id)
+        if row is None:
+            raise KeyError(f"Client {client_id} not found")
+        # delete flight
+        self.clients.pop(idx)
+        self.flights = [f for f in self.flights if int(f.get("client_id", 0)) != int(client_id)]
+        self._maybe_save()
+        log.info("Delete client %s", client_id)
+
+    def search_clients(self, q: str) -> List[Dict]:
+        q = (q or "").strip().lower()
+        if not q:
+            return []
+        out: List[Dict] = []
+        for r in self.clients:
+            if q.isdigit() and int(q) == int(r.get("client_id", 0)):
+                out.append(r); continue
+            if q in str(r.get("Phone", "")).lower() or q in str(r.get("Name", "")).lower():
+                out.append(r)
+        log.info("Search clients q=%s -> %d", q, len(out))
+        return out
+
+    # ----------airline commpany ----------
+    def create_airline(self, data: Dict) -> Dict:
+        data["Type"] = "airline"
+        if not data.get("CompanyName"):
+            raise ValueError("CompanyName is required")
+        new_id = self._next_id(self.airlines, "airline_id")
+        a = Airline(airline_id=new_id, **{k: v for k, v in data.items() if k != "airline_id"})
+        self.airlines.append(a.to_dict())
+        self._maybe_save()
+        log.info("Create airline: %s", a.to_dict())
+        return a.to_dict()
+
+    def update_airline(self, airline_id: int, patch: Dict) -> Dict:
+        idx, row = self._index_of(self.airlines, "airline_id", airline_id)
+        if row is None:
+            raise KeyError(f"Airline {airline_id} not found")
+        merged = {**row, **patch, "Type": "airline", "airline_id": airline_id}
+        self.airlines[idx] = merged
+        self._maybe_save()
+        log.info("Update airline %s -> %s", airline_id, merged)
+        return merged
+
+    def delete_airline(self, airline_id: int):
+        idx, row = self._index_of(self.airlines, "airline_id", airline_id)
+        if row is None:
+            raise KeyError(f"Airline {airline_id} not found")
+        self.airlines.pop(idx)
+        self.flights = [f for f in self.flights if int(f.get("airline_id", 0)) != int(airline_id)]
+        self._maybe_save()
+        log.info("Delete airline %s", airline_id)
+
+    def search_airlines(self, q: str) -> List[Dict]:
+        q = (q or "").strip().lower()
+        if not q:
+            return []
+        out: List[Dict] = []
+        for r in self.airlines:
+            if q.isdigit() and int(q) == int(r.get("airline_id", 0)):
+                out.append(r); continue
+            if q in str(r.get("CompanyName", "")).lower():
+                out.append(r)
+        log.info("Search airlines q=%s -> %d", q, len(out))
+        return out
+
+    # ----------flight ----------
+    def _check_fk(self, client_id: int, airline_id: int):
+        if not self._find(self.clients, "client_id", client_id):
+            raise ValueError(f"client_id {client_id} not found")
+        if not self._find(self.airlines, "airline_id", airline_id):
+            raise ValueError(f"airline_id {airline_id} not found")
+
+    def create_flight(self, data: Dict) -> Dict:
+        data["Type"] = "flight"
+        self._check_fk(int(data["client_id"]), int(data["airline_id"]))
+        # check date valid
+        try:
+            datetime.strptime(data.get("Date", ""), "%Y-%m-%d %H:%M")
+        except Exception:
+            raise ValueError("Date must be 'YYYY-MM-DD HH:MM'")
+        new_id = self._next_id(self.flights, "ID")
+        f = Flight(ID=new_id, **{k: v for k, v in data.items() if k != "ID"})
+        self.flights.append(f.to_dict())
+        self._maybe_save()
+        log.info("Create flight: %s", f.to_dict())
+        return f.to_dict()
+
+    def update_flight(self, flight_id: int, patch: Dict) -> Dict:
+        idx, row = self._index_of(self.flights, "ID", flight_id)
+        if row is None:
+            raise KeyError(f"Flight {flight_id} not found")
+        merged = {**row, **patch, "Type": "flight", "ID": flight_id}
+        self._check_fk(int(merged["client_id"]), int(merged["airline_id"]))
+        # check date valid
+        try:
+            datetime.strptime(merged.get("Date", ""), "%Y-%m-%d %H:%M")
+        except Exception:
+            raise ValueError("Date must be 'YYYY-MM-DD HH:MM'")
+        self.flights[idx] = merged
+        self._maybe_save()
+        log.info("Update flight %s -> %s", flight_id, merged)
+        return merged
+
+    def delete_flight(self, flight_id: int):
+        idx, row = self._index_of(self.flights, "ID", flight_id)
+        if row is None:
+            raise KeyError(f"Flight {flight_id} not found")
+        self.flights.pop(idx)
+        self._maybe_save()
+        log.info("Delete flight %s", flight_id)
+
+    # ---------- check flights ----------
+    def search_flights(self, q: str) -> List[Dict]:
+        q = (q or "").strip().lower()
+        if not q:
+            return []
+        # match client
+        matched = []
+        for c in self.clients:
+            if q.isdigit() and int(q) == int(c.get("client_id", 0)):
+                matched.append(c); continue
+            if q in c.get("Name", "").lower() or q in c.get("Phone", "").lower():
+                matched.append(c)
+        ids = {int(c["client_id"]) for c in matched}
+        out: List[Dict] = []
+        for f in self.flights:
+            if int(f.get("client_id", 0)) not in ids:
+                continue
+            enr = dict(f)
+            a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
+            c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
+            enr["ClientName"] = c.get("Name", "")
+            enr["Phone"] = c.get("Phone", "")
+            enr["Airline"] = a.get("CompanyName", "")
+            out.append(enr)
+        log.info("Search flights q=%s -> %d", q, len(out))
+        return out
