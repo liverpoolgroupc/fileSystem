@@ -2,9 +2,9 @@ from typing import Dict, List, Optional, Tuple
 import logging
 from datetime import datetime
 
-from models import Client, Airline, Flight
-from storage import JsonlStorage
-from catalogs import COUNTRY_CATALOG, CITY_CATALOG, COUNTRY_TO_CITIES
+from .models import Client, Airline, Flight
+from .storage import JsonlStorage
+from .catalogs import COUNTRY_CATALOG, CITY_CATALOG, COUNTRY_TO_CITIES
 
 log = logging.getLogger(__name__)
 
