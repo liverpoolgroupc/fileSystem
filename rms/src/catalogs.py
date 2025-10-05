@@ -1,34 +1,34 @@
 from typing import List, Dict
 
-# 主要国家（全称，不少于 50 个）
+# Major countries (official full names, at least 50)
 COUNTRY_CATALOG: List[str] = [
-    # 北美
+    # North America
     "United States", "Canada", "Mexico",
-    # 南美
+    # Sourth America
     "Brazil", "Argentina", "Chile", "Colombia", "Peru", "Venezuela",
     "Uruguay", "Paraguay", "Ecuador",
-    # 西欧/中欧
+    # Europe
     "United Kingdom", "Ireland", "France", "Germany", "Spain", "Portugal",
     "Italy", "Netherlands", "Belgium", "Luxembourg", "Switzerland", "Austria",
     "Monaco", "Liechtenstein",
-    # 北欧/东欧/南欧
+    # Europe
     "Norway", "Sweden", "Finland", "Denmark", "Iceland",
     "Poland", "Czechia", "Hungary", "Romania", "Bulgaria", "Slovakia",
     "Slovenia", "Croatia", "Greece", "Türkiye", "Ukraine",
-    # 中东
+    # Middle East
     "United Arab Emirates", "Saudi Arabia", "Qatar", "Kuwait", "Oman", "Bahrain", "Israel",
-    # 非洲
+    # Africa
     "Egypt", "South Africa", "Nigeria", "Kenya", "Morocco", "Algeria", "Tunisia", "Ethiopia", "Tanzania",
-    # 亚洲
+    # Asia
     "China", "Japan", "South Korea", "Hong Kong", "Macao", "Taiwan",
     "India", "Pakistan", "Bangladesh", "Sri Lanka",
     "Singapore", "Malaysia", "Thailand", "Vietnam", "Philippines", "Indonesia",
     "Cambodia", "Laos", "Myanmar", "Mongolia", "Nepal",
-    # 大洋洲
+    # Oceania
     "Australia", "New Zealand",
 ]
 
-# “国家 -> 主要城市”映射（可继续扩充）
+# Country → Major Cities mapping (extensible)
 COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "United States": ["New York", "Los Angeles", "San Francisco", "Seattle", "Chicago", "Boston", "Houston", "Miami"],
     "Canada": ["Toronto", "Vancouver", "Montreal", "Ottawa"],
@@ -119,5 +119,6 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "New Zealand": ["Auckland", "Wellington", "Christchurch"],
 }
 
-# 供航班 Start/EndCity 使用的“全局热门城市清单”
-CITY_CATALOG: List[str] = sorted({c for lst in COUNTRY_TO_CITIES.values() for c in lst})
+# Global Popular Cities List
+CITY_CATALOG: List[str] = sorted(
+    {c for lst in COUNTRY_TO_CITIES.values() for c in lst})
