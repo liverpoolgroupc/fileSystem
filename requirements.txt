@@ -1,0 +1,1 @@
+#uses only Python stdlib (tkinter, json, logging, etc.)
