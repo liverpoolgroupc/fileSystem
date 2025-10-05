@@ -247,3 +247,67 @@ class TestRMSClient(unittest.TestCase):
         print(f"Test Details: Search results → ID '1': {len(search_by_id)}, Name 'ali': {len(search_by_name)}, Phone '138': {len(search_by_phone)}, 'bob': {len(search_no_match)}")
 
 
+# 4. Test Class: Airline Management Functions
+# Tests airline record operations
+class TestRMSAirline(unittest.TestCase):
+    def setUp(self):
+        self.mock_storage = MockStorage()
+        self.rms = RMS(storage=self.mock_storage)
+        print(f"\n=== Starting Test: {self._testMethodName} ===")
+
+    def tearDown(self):
+        print(f"=== Completed Test: {self._testMethodName} (PASSED) ===")
+
+    # Test: Create a valid airline record
+    def test_create_airline_valid(self):
+        airline_data = {"CompanyName": "Cathay Pacific"}  # Required field
+        result = self.rms.create_airline(airline_data)
+        
+        # Validate return value and in-memory state
+        self.assertEqual(result["Type"], "airline", "Airline record 'Type' should be 'airline'")
+        self.assertEqual(result["airline_id"], 1, "First airline created should have ID=1")
+        self.assertEqual(len(self.rms.airlines), 1, "Airline list should have 1 new record")
+        
+        print(f"Test Details: Created airline with ID {result['airline_id']} (Name: {result['CompanyName']})")
+
+    # Test: Create airline fails when CompanyName is missing/empty (raises ValueError)
+    def test_create_airline_missing_name(self):
+        invalid_data = {"CompanyName": ""}  # Empty CompanyName (required)
+        with self.assertRaises(ValueError) as exc_context:
+            self.rms.create_airline(invalid_data)
+        error_msg = str(exc_context.exception)
+        self.assertIn("CompanyName is required", error_msg, "Error should say CompanyName is required")
+        
+        print(f"Test Details: Empty CompanyName → Error raised: '{error_msg}' (expected)")
+        print(f"Airline list size remains: {len(self.rms.airlines)} (expected 0)")
+
+    # Test: Delete an airline and all related flights (referential integrity)
+    def test_delete_airline(self):
+        # Step 1: Create dependent records (airline → flight linked to airline)
+        self.rms.create_airline({"CompanyName": "Cathay"})  # Airline ID 1
+        self.rms.create_client({
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"
+        })
+        self.rms.create_flight({
+            "client_id": 1,
+            "airline_id": 1,  # Linked to airline ID 1
+            "Date": "2024-12-31 23:59",
+            "StartCity": "HK",
+            "EndCity": "London"
+        })
+        
+        # Step 2: Delete the airline (ID 1)
+        self.rms.delete_airline(airline_id=1)
+        
+        # check deletion (airline and associated flight are removed)
+        self.assertEqual(len(self.rms.airlines), 0, "Airline should be deleted")
+        self.assertEqual(len(self.rms.flights), 0, "Associated flights should be deleted too")
+        
+        print(f"Test Details: Deleted airline ID 1 → Airline list size: {len(self.rms.airlines)} (0), Flight list size: {len(self.rms.flights)} (0)")
+
