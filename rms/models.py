@@ -1,3 +1,4 @@
+# models.py
 from dataclasses import dataclass, field, asdict
 from typing import Dict
 
@@ -38,7 +39,7 @@ class Airline:
 
 @dataclass
 class Flight:
-    """航班记录：ID 为主键，client_id/airline_id 为外键"""
+    """航班记录：ID 为航班自身主键，client_id/airline_id 为外键"""
     ID: int
     Type: str = field(default="flight")
     client_id: int = 0
