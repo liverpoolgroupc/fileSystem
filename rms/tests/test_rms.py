@@ -107,4 +107,143 @@ class TestRMSUtils(unittest.TestCase):
         self.assertEqual(index, -1, "Should return index -1 when record is not found")
         self.assertIsNone(record, "Should return None when record is not found")
         print(f"Test Details: Search for non-existent ID 10 → Index: {index}, Record: {record} (expected (-1, None))")
+        
+# 3. Test Class: Client Management Functions (create/update/delete/search)
+# Tests end-to-end client record operations
+class TestRMSClient(unittest.TestCase):
+    def setUp(self):
+        self.mock_storage = MockStorage()
+        self.rms = RMS(storage=self.mock_storage)
+        print(f"\n=== Starting Test: {self._testMethodName} ===")
+
+    def tearDown(self):
+        print(f"=== Completed Test: {self._testMethodName} (PASSED) ===")
+
+    # Test: Create a valid client record (all required fields provided)
+    def test_create_client_valid(self):
+        # Valid client data (includes all required fields)
+        client_data = {
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"
+        }
+        result = self.rms.create_client(client_data)
+        
+        # Validate return value and in-memory state
+        self.assertEqual(result["Type"], "client", "Client record 'Type' should be 'client'")
+        self.assertEqual(result["client_id"], 1, "First client created should have ID=1")
+        self.assertEqual(result["Name"], "Bob", "Client name should match input")
+        self.assertEqual(len(self.rms.clients), 1, "Client list should have 1 new record")
+        
+        print(f"Test Details: Created client with ID {result['client_id']} (Name: {result['Name']})")
+        print(f"Client list size after creation: {len(self.rms.clients)} (expected 1)")
+
+    # Test: Create client fails when required fields are missing (raises ValueError)
+    def test_create_client_missing_fields(self):
+        # Invalid data: missing required fields (Address1, City, Country)
+        invalid_data = {"Name": "Bob", "Phone": "123456"}
+        
+        # Verify ValueError is raised with correct message
+        with self.assertRaises(ValueError) as exc_context:
+            self.rms.create_client(invalid_data)
+        error_msg = str(exc_context.exception)
+        self.assertIn("Missing required fields", error_msg, "Error should mention missing required fields")
+        
+        print(f"Test Details: Missing required fields → Error raised: '{error_msg}' (expected)")
+        print(f"Client list size remains: {len(self.rms.clients)} (expected 0)")
+
+    # Test: Update an existing client record with valid data
+    def test_update_client_valid(self):
+        # Step 1: Create a base client first
+        self.rms.create_client({
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"  # Original phone number
+        })
+        
+        # Step 2: Update the client's phone number
+        update_data = {"Phone": "654321"}  # New phone number
+        result = self.rms.update_client(client_id=1, patch=update_data)
+        
+        # Validate update result
+        self.assertEqual(result["Phone"], "654321", "Client phone number should be updated")
+        self.assertEqual(self.rms.clients[0]["Phone"], "654321", "In-memory client list should sync the update")
+        
+        print(f"Test Details: Updated client ID 1 → New phone: {result['Phone']} (expected '654321')")
+
+    # Test: Update fails when the client ID does not exist (raises KeyError)
+    def test_update_client_not_exist(self):
+        # Try to update client ID 999 (never created)
+        with self.assertRaises(KeyError) as exc_context:
+            self.rms.update_client(client_id=999, patch={"Name": "New Name"})
+        error_msg = str(exc_context.exception)
+        self.assertIn("Client 999 not found", error_msg, "Error should say client ID 999 is not found")
+        
+        print(f"Test Details: Update non-existent client 999 → Error raised: '{error_msg}' (expected)")
+
+    # Test: Delete a client and all associated flights (referential integrity)
+    def test_delete_client(self):
+        # Step 1: Create dependent records (client → airline → flight linked to client)
+        self.rms.create_client({
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"
+        })
+        self.rms.create_airline({"CompanyName": "Cathay"})
+        self.rms.create_flight({
+            "client_id": 1,  # Linked to client ID 1
+            "airline_id": 1,
+            "Date": "2024-12-31 23:59",
+            "StartCity": "HK",
+            "EndCity": "London"
+        })
+        
+        # Step 2: Delete the client (ID 1)
+        self.rms.delete_client(client_id=1)
+        
+        # Validate deletion (client and associated flight are removed)
+        self.assertEqual(len(self.rms.clients), 0, "Client should be deleted")
+        self.assertEqual(len(self.rms.flights), 0, "Associated flights should be deleted too")
+        
+        print(f"Test Details: Deleted client ID 1 → Client list size: {len(self.rms.clients)} (0), Flight list size: {len(self.rms.flights)} (0)")
+
+    # Test: Search clients by keyword (matches ID, Name, or Phone substring)
+    def test_search_clients(self):
+        # Create a test client for searching
+        self.rms.create_client({
+            "Name": "Alice",
+            "Address1": "Street B",
+            "City": "SH",
+            "State": "SH",
+            "Zip": "456",
+            "Country": "CN",
+            "Phone": "13800138000"
+        })
+        
+        # Test different search keywords
+        search_by_id = self.rms.search_clients("1")  # Search by client ID (1)
+        search_by_name = self.rms.search_clients("ali")  # Search by name substring ("ali" in "Alice")
+        search_by_phone = self.rms.search_clients("138")  # Search by phone substring ("138" in "13800138000")
+        search_no_match = self.rms.search_clients("bob")  # No matching client
+        
+        # Validate search results
+        self.assertEqual(len(search_by_id), 1, "Search by ID '1' should find 1 client")
+        self.assertEqual(len(search_by_name), 1, "Search by name 'ali' should find 1 client")
+        self.assertEqual(len(search_by_phone), 1, "Search by phone '138' should find 1 client")
+        self.assertEqual(len(search_no_match), 0, "Search for 'bob' should return 0 results")
+        
+        print(f"Test Details: Search results → ID '1': {len(search_by_id)}, Name 'ali': {len(search_by_name)}, Phone '138': {len(search_by_phone)}, 'bob': {len(search_no_match)}")
+
 
