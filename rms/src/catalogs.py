@@ -24,19 +24,11 @@ COUNTRY_CATALOG: List[str] = [
     "India", "Pakistan", "Bangladesh", "Sri Lanka",
     "Singapore", "Malaysia", "Thailand", "Vietnam", "Philippines", "Indonesia",
     "Cambodia", "Laos", "Myanmar", "Mongolia", "Nepal",
-<<<<<<< HEAD
-    # 大洋洲
-    "Australia", "New Zealand",
-]
-
-# “国家 -> 主要城市”映射（可继续扩充）
-=======
     # Oceania
     "Australia", "New Zealand",
 ]
 
 # Country → Major Cities mapping (extensible)
->>>>>>> 3e9480169e251baa2428df129cc69d33e104ebe8
 COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "United States": ["New York", "Los Angeles", "San Francisco", "Seattle", "Chicago", "Boston", "Houston", "Miami"],
     "Canada": ["Toronto", "Vancouver", "Montreal", "Ottawa"],
@@ -127,11 +119,6 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "New Zealand": ["Auckland", "Wellington", "Christchurch"],
 }
 
-<<<<<<< HEAD
-# 供航班 Start/EndCity 使用的“全局热门城市清单”
-CITY_CATALOG: List[str] = sorted({c for lst in COUNTRY_TO_CITIES.values() for c in lst})
-=======
 # Global Popular Cities List
 CITY_CATALOG: List[str] = sorted(
     {c for lst in COUNTRY_TO_CITIES.values() for c in lst})
->>>>>>> 3e9480169e251baa2428df129cc69d33e104ebe8
