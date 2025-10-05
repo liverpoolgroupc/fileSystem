@@ -17,3 +17,26 @@ from datetime import datetime
 from src.services import RMS
 
 
+# 1. Unit test storage will use this class instead of affecting the actual files
+class MockStorage:
+    def __init__(self):
+        self.clients = []
+        self.airlines = []
+        self.flights = []
+    
+    def load_all(self):
+        return {
+            "clients": self.clients,
+            "airlines": self.airlines,
+            "flights": self.flights
+        }
+    
+    # Modify Write Action, and not write into actual files
+    def write_clients(self, data):
+        self.clients = data
+    
+    def write_airlines(self, data):
+        self.airlines = data
+    
+    def write_flights(self, data):
+        self.flights = data
