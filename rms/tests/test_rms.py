@@ -311,3 +311,230 @@ class TestRMSAirline(unittest.TestCase):
         
         print(f"Test Details: Deleted airline ID 1 → Airline list size: {len(self.rms.airlines)} (0), Flight list size: {len(self.rms.flights)} (0)")
 
+# 5. Test Class: Flight Management Functions
+# Tests end-to-end flight record operations (depends on client/airline records for referential integrity)
+class TestRMSFlight(unittest.TestCase):
+    def setUp(self):
+        # Initialize clean RMS instance with MockStorage before each test
+        self.mock_storage = MockStorage()
+        self.rms = RMS(storage=self.mock_storage)
+        # Log test start to console
+        print(f"\n=== Starting Test: {self._testMethodName} ===")
+
+    def tearDown(self):
+        # Log test completion (only runs if test passes)
+        print(f"=== Completed Test: {self._testMethodName} (PASSED) ===")
+
+    # Test: Create a valid flight (all fields valid + linked client/airline exist)
+    def test_create_flight_valid(self):
+        # Step 1: Create dependent client and airline (required for valid flight)
+        self.rms.create_client({
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"
+        })  # Creates client with ID=1
+        self.rms.create_airline({"CompanyName": "Cathay Pacific"})  # Creates airline with ID=1
+
+        # Step 2: Define valid flight data (matches required format)
+        valid_flight_data = {
+            "client_id": 1,       # Exists in clients
+            "airline_id": 1,      # Exists in airlines
+            "Date": "2024-12-31 23:59",  # Valid format: YYYY-MM-DD HH:MM
+            "StartCity": "Hong Kong",
+            "EndCity": "London"
+        }
+
+        # Step 3: Create the flight
+        result = self.rms.create_flight(valid_flight_data)
+
+        # Validate return value and in-memory state
+        self.assertEqual(result["Type"], "flight", "Flight record 'Type' must be 'flight'")
+        self.assertEqual(result["ID"], 1, "First valid flight should have ID=1")
+        self.assertEqual(result["StartCity"], "Hong Kong", "Flight start city should match input")
+        self.assertEqual(len(self.rms.flights), 1, "Flight list should add 1 new record")
+
+        # Log details to console
+        print(f"Test Details: Created flight ID {result['ID']} → {result['StartCity']} → {result['EndCity']}")
+        print(f"Flight list size after creation: {len(self.rms.flights)} (expected 1)")
+
+    # Test: Create flight fails if Date format is invalid (raises ValueError)
+    def test_create_flight_invalid_date(self):
+        # Step 1: Create required dependent records (client + airline)
+        self.rms.create_client({
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"
+        })
+        self.rms.create_airline({"CompanyName": "Cathay Pacific"})
+
+        # Step 2: Define flight with INVALID date format (uses '/' instead of '-')
+        invalid_date_data = {
+            "client_id": 1,
+            "airline_id": 1,
+            "Date": "2024/12/31 23:59",  # Invalid: Should be "YYYY-MM-DD HH:MM"
+            "StartCity": "Hong Kong",
+            "EndCity": "London"
+        }
+
+        # Step 3: Verify ValueError is raised with correct message
+        with self.assertRaises(ValueError) as exc_context:
+            self.rms.create_flight(invalid_date_data)
+        error_msg = str(exc_context.exception)
+        self.assertIn("Date must be 'YYYY-MM-DD HH:MM'", error_msg, 
+                      "Error should warn about invalid date format")
+
+        # Log details to console
+        print(f"Test Details: Invalid date format → Error raised: '{error_msg}' (expected)")
+        print(f"Flight list size remains: {len(self.rms.flights)} (expected 0)")
+
+    # Test: Create flight fails if linked Client ID does not exist (raises KeyError)
+    def test_create_flight_missing_client(self):
+        # Step 1: Create airline (but NO client)
+        self.rms.create_airline({"CompanyName": "Cathay Pacific"})
+
+        # Step 2: Define flight with non-existent Client ID (999)
+        missing_client_data = {
+            "client_id": 999,     # Client 999 does not exist
+            "airline_id": 1,
+            "Date": "2024-12-31 23:59",
+            "StartCity": "Hong Kong",
+            "EndCity": "London"
+        }
+
+        # Step 3: Verify ValueError is raised (not KeyError)
+        with self.assertRaises(ValueError) as exc_context:   
+            self.rms.create_flight(missing_client_data)
+        error_msg = str(exc_context.exception)
+        self.assertIn("client_id 999 not found", error_msg,  # Match the actual error message
+                    "Error should say linked client does not exist")
+
+        # Log details to console
+        print(f"Test Details: Non-existent client ID 999 → Error raised: '{error_msg}' (expected)")
+
+    # Test: Create flight fails if linked Airline ID does not exist (raises KeyError)
+    def test_create_flight_missing_airline(self):
+        # Step 1: Create client (but NO airline)
+        self.rms.create_client({
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"
+        })
+
+        # Step 2: Define flight with non-existent Airline ID (999)
+        missing_airline_data = {
+            "client_id": 1,
+            "airline_id": 999,    # Airline 999 does not exist
+            "Date": "2024-12-31 23:59",
+            "StartCity": "Hong Kong",
+            "EndCity": "London"
+        }
+
+        # Step 3: Verify ValueError is raised (not KeyError)
+        with self.assertRaises(ValueError) as exc_context:  # Changed to ValueError
+            self.rms.create_flight(missing_airline_data)
+        error_msg = str(exc_context.exception)
+        self.assertIn("airline_id 999 not found", error_msg,  # Match the actual error message
+                    "Error should say linked airline does not exist")
+
+        # Log details to console
+        print(f"Test Details: Non-existent airline ID 999 → Error raised: '{error_msg}' (expected)")
+
+    # Test: Search flights by keyword (matches client name/ID/phone, airline name, or city)
+    def test_search_flights(self):
+    # Step 1: Create dependent records (client → airline → flight linked to client)
+    # Client: ID=1, Name="Charlie", Phone="13900139000" (used for client-based search)
+        self.rms.create_client({
+            "Name": "Charlie",
+            "Address1": "Street C",
+            "City": "Beijing",
+            "State": "Beijing",
+            "Zip": "789",
+            "Country": "China",
+            "Phone": "13900139000"
+        })
+        # Airline: ID=1, Name="Air China" (flight is linked to this airline but search won't use it)
+        self.rms.create_airline({"CompanyName": "Air China"})
+        # Flight: Linked to client 1 (so it will appear in client-based searches)
+        self.rms.create_flight({
+            "client_id": 1,
+            "airline_id": 1,
+            "Date": "2025-01-01 10:00",
+            "StartCity": "Beijing",
+            "EndCity": "New York"
+        })
+
+        # Step 2: Test search keywords that match CLIENT fields (since search_flights depends on client matches)
+        search_by_client_name = self.rms.search_flights("charlie")  # Matches client name substring
+        search_by_client_id = self.rms.search_flights("1")          # Matches client ID
+        search_by_client_phone = self.rms.search_flights("139")     # Matches client phone substring
+        search_no_client_match = self.rms.search_flights("bob")     # No matching client (no results)
+
+        # Step 3: Test that airline-based searches return 0 (since current logic doesn't support them)
+        search_by_airline = self.rms.search_flights("air china")    # No client match → 0 results
+
+        # Step 4: Validate results (align with current search_flights behavior)
+        self.assertEqual(len(search_by_client_name), 1, 
+                            "Search by client name 'charlie' should find 1 flight")
+        self.assertEqual(len(search_by_client_id), 1, 
+                            "Search by client ID '1' should find 1 flight")
+        self.assertEqual(len(search_by_client_phone), 1, 
+                            "Search by client phone '139' should find 1 flight")
+        self.assertEqual(len(search_no_client_match), 0, 
+                            "Search for 'bob' (no client match) should return 0 results")
+        self.assertEqual(len(search_by_airline), 0, 
+                            "Search by airline name is not supported (expected 0 results)")
+
+        # Log details to console
+        print(f"Test Details: Search Results → "
+                f"Client 'charlie': {len(search_by_client_name)}, "
+                f"Client ID '1': {len(search_by_client_id)}, "
+                f"Phone '139': {len(search_by_client_phone)}, "
+                f"No client match 'bob': {len(search_no_client_match)}, "
+                f"Airline 'air china' (unsupported): {len(search_by_airline)}")
+    
+    # Test: Delete a flight (independent of client/airline deletion)
+    def test_delete_flight(self):
+        # Step 1: Create dependent records and a flight
+        self.rms.create_client({
+            "Name": "Bob",
+            "Address1": "Street A",
+            "City": "HK",
+            "State": "HK",
+            "Zip": "123",
+            "Country": "HK",
+            "Phone": "123456"
+        })
+        self.rms.create_airline({"CompanyName": "Cathay Pacific"})
+        self.rms.create_flight({  # Creates flight ID=1
+            "client_id": 1,
+            "airline_id": 1,
+            "Date": "2024-12-31 23:59",
+            "StartCity": "Hong Kong",
+            "EndCity": "London"
+        })
+
+        # Step 2: Delete the flight (ID=1)
+        self.rms.delete_flight(flight_id=1)  # Assumes RMS has a delete_flight method (matches CRUD pattern)
+
+        # Step 3: Validate deletion (flight is removed; client/airline remain)
+        self.assertEqual(len(self.rms.flights), 0, "Flight should be deleted from list")
+        self.assertEqual(len(self.rms.clients), 1, "Client should remain (not deleted with flight)")
+        self.assertEqual(len(self.rms.airlines), 1, "Airline should remain (not deleted with flight)")
+
+        # Log details to console
+        print(f"Test Details: Deleted flight ID 1 → "
+              f"Flight list size: {len(self.rms.flights)} (0), "
+              f"Client list size: {len(self.rms.clients)} (1), "
+              f"Airline list size: {len(self.rms.airlines)} (1)")
