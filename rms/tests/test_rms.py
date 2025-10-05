@@ -2,36 +2,39 @@ import sys
 from pathlib import Path
 
 # Resolve the absolute path of the current test file (__file__ refers to this script itself)
-# This ensures consistency even if the script is run from a different working directory
+# Ensures consistency even if the script is run from a different working directory
 current_file = Path(__file__).resolve()
+
 # Navigate up two directory levels to get the parent directory of the "tests" folder
-# (e.g.: If current_file is "rms/tests/test_rms.py", rms_dir becomes "rms/")
-# This points to the directory containing the "services.py" module we need to import
+# Example: If current_file is "rms/tests/test_rms.py", rms_dir becomes "rms/"
+# This points to the directory containing the "services.py" module needed for import
 rms_dir = current_file.parent.parent
-# Add the rms_dir to Python's system path (sys.path)
-# This tells Python where to look for the "services" module when we use `from services import RMS`
+# Add rms_dir to Python's system path (sys.path)
+# Tells Python where to locate the "services" module when using `from src.services import RMS`
 sys.path.append(str(rms_dir))
 
 import unittest
 from datetime import datetime
-from src.services import RMS
+from src.services import RMS  # Import the RMS class from the services module
 
-
-# 1. Unit test storage will use this class instead of affecting the actual files
+# 1. Mock Storage Class (matches the logic of the original storage module)
+# Isolates real file operations to avoid modifying actual disk data during testing
 class MockStorage:
     def __init__(self):
+        # Initialize empty in-memory lists for each record type
         self.clients = []
         self.airlines = []
         self.flights = []
     
     def load_all(self):
+        # Simulate loading data: return current in-memory records
         return {
             "clients": self.clients,
             "airlines": self.airlines,
             "flights": self.flights
         }
     
-    # Modify Write Action, and not write into actual files
+    # Simulate write operations (only update in-memory data, no disk interaction)
     def write_clients(self, data):
         self.clients = data
     
