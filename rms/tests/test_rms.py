@@ -538,3 +538,8 @@ class TestRMSFlight(unittest.TestCase):
               f"Flight list size: {len(self.rms.flights)} (0), "
               f"Client list size: {len(self.rms.clients)} (1), "
               f"Airline list size: {len(self.rms.airlines)} (1)")
+        
+# Entry point for the Unit test functon
+if __name__ == "__main__":
+    print("=== STARTING ALL RMS UNIT TESTS ===")
+    unittest.main(verbosity=1)  # Verbosity=1 keeps output clean (only logs + pass/fail)
