@@ -32,6 +32,8 @@ def validate_company_name(raw: str) -> str:
     if not re.fullmatch(r"[A-Za-z0-9 &.,'\-]+", s):
         raise ValueError("CompanyName contains invalid characters")
     _ensure_len(s, 2, 120, "CompanyName")
+    if s.isdigit():
+        raise ValueError("CompanyName cannot be digits only")
     return s
 
 def validate_phone(raw: str, allow_plus: bool = False) -> str:
@@ -41,7 +43,6 @@ def validate_phone(raw: str, allow_plus: bool = False) -> str:
     Length constraint: 7–20 digits.
     """
     s = _s(raw)
-    # 去掉常见视觉分隔符
     s = re.sub(r"[\s().\-/.]+", "", s)
 
     if allow_plus:
