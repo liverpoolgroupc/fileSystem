@@ -3,8 +3,13 @@ import logging
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
+import sys, pathlib
 
-from .services import RMS
+HERE = pathlib.Path(__file__).resolve().parent
+if str(HERE) not in sys.path:
+    sys.path.insert(0, str(HERE))
+
+from services import RMS
 
 logging.basicConfig(
     level=logging.INFO,
