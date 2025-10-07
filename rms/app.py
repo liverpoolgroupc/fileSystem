@@ -20,6 +20,7 @@ class App(tk.Tk):
         self.resizable(True, True)
         
         self.rms = RMS()
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
 
         nb = ttk.Notebook(self)
         self.tab_clients = ttk.Frame(nb)
@@ -124,7 +125,7 @@ class App(tk.Tk):
         ttk.Button(form, text="Create New Record", command=self.on_client_create).grid(row=11, column=0, sticky="sw", padx=4, pady=4)
         ttk.Button(form, text="Update Record", command=self.on_client_update).grid(row=11, column=1, sticky="se", padx=4, pady=4)
         ttk.Button(form, text="Delete Record", command=self.on_client_delete).grid(row=12, column=0, sticky="sw", padx=4, pady=4)
-        ttk.Button(form, text="Save Changes").grid(row=12, column=1, sticky="se", padx=4, pady=4) # Does nothing yet
+        ttk.Button(form, text="Save Changes", command=self.on_save_all).grid(row=12, column=1, sticky="se", padx=4, pady=4) # Does nothing yet
 
         # Right Panel:
         # Search bar + list
@@ -273,7 +274,7 @@ class App(tk.Tk):
         ttk.Button(form, text="Create New Record", command=self.on_airline_create).grid(row=11, column=0, sticky="sw", padx=4, pady=4)
         ttk.Button(form, text="Update Record", command=self.on_airline_update).grid(row=11, column=1, sticky="se", padx=4, pady=4)
         ttk.Button(form, text="Delete Record", command=self.on_airline_delete).grid(row=12, column=0, sticky="sw", padx=4, pady=4)
-        ttk.Button(form, text="Save Changes").grid(row=12, column=1, sticky="se", padx=4, pady=4) # Does nothing yet
+        ttk.Button(form, text="Save Changes", command=self.on_save_all).grid(row=12, column=1, sticky="se", padx=4, pady=4) # Does nothing yet
 
         # Right Panel:
         # Search bar + list
@@ -421,13 +422,13 @@ class App(tk.Tk):
         ttk.Button(form, text="Create", command=self.on_flight_create).grid(row=6, column=0, sticky="sw", padx=4, pady=4)
         ttk.Button(form, text="Update", command=self.on_flight_update).grid(row=6, column=1, sticky="se", padx=4, pady=4)
         ttk.Button(form, text="Delete", command=self.on_flight_delete).grid(row=7, column=0, sticky="sw", padx=4, pady=4)
-        ttk.Button(form, text="Save Changes").grid(row=7, column=1, sticky="se", padx=4, pady=4) # Does nothing yet
+        ttk.Button(form, text="Save Changes", command=self.on_save_all).grid(row=7, column=1, sticky="se", padx=4, pady=4) # Does nothing yet
 
         # Right Panel:
         # Search + foreign key combo search
         sbar = ttk.Frame(right); sbar.pack(side="top", fill="x")
         ttk.Label(sbar, text="Search by Client ID/Client Name/Phone Number").grid(row=0, column=0, sticky="w")
-        self.ent_fsearch = ttk.Entry(sbar, width=32).grid(row=0, column=1, sticky="w")
+        self.ent_fsearch = ttk.Entry(sbar, width=32); self.ent_fsearch.grid(row=0, column=1, sticky="w")
         ttk.Button(sbar, text="Find", command=self.on_flight_search).grid(row=0, column=2, padx=4)
         ttk.Button(sbar, text="Filter", command=self.on_flight_search_fk).grid(row=1, column=2, padx=4)
         ttk.Button(sbar, text="Show All", command=self.refresh_flights).grid(row=0, column=3, padx=4)
@@ -503,6 +504,17 @@ class App(tk.Tk):
         self.cmb_fk_client.configure(values=self.rms.list_clients_combo())
         self.cmb_airline.configure(values=self.rms.list_airlines_combo())
         self.cmb_fk_airline.configure(values=self.rms.list_airlines_combo())
+
+    def on_save_all(self):
+        try:
+            self.rms.save_all()
+        except Exception as e:
+            messagebox.showerror("Save Failed", str(e))
+            return
+        self.refresh_clients()
+        self.refresh_airlines()
+        self.refresh_flights()
+        messagebox.showinfo("Changes Saved", "All Changes Saved")
 
     def on_flight_select(self, _evt):
         sel = self.tree_flights.selection()
@@ -599,6 +611,14 @@ class App(tk.Tk):
         } for r in rows]
         self.refresh_flights(disp)
 
+    def on_close(self):
+        try:
+            self.rms.save_all()
+        except Exception as e:
+            messagebox.showerror("Save All Failed", str(e))
+            return
+        else:
+            self.destroy()
 
 if __name__ == "__main__":
     App().mainloop()

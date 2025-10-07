@@ -27,7 +27,7 @@ class RMS:
         self.airlines: List[dict] = data.get("airlines", [])
         self.flights: List[dict] = data.get("flights", [])
 
-    # ---------- 公共小工具 ----------
+    # ---------- General Helper Functions ----------
     def _next_id(self, rows: List[dict], key: str) -> int:
         n = 1
         for r in rows:
@@ -59,6 +59,15 @@ class RMS:
         self.st.write_clients(self.clients)
         self.st.write_airlines(self.airlines)
         self.st.write_flights(self.flights)
+
+    def save_all(self):
+        self._maybe_save()
+        return {
+            "clients": len(self.clients),
+            "airlines": len(self.airlines),
+            "flights": len(self.flights),
+        }
+
 
     # ---------- 下拉数据 ----------
     def list_cities(self) -> List[str]:
