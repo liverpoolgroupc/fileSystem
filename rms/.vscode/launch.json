@@ -1,0 +1,13 @@
+{
+    "version": "0.1.0",
+    "configurations": [
+        {
+            "name": "Python: Run src.app",
+            "type": "python",
+            "request": "launch",
+            "module": "src.app",   
+            "cwd": "${workspaceFolder}", 
+            "justMyCode": true  
+        }
+    ]
+}
