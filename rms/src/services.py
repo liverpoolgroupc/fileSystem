@@ -66,7 +66,7 @@ class RMS:
         self.st.write_airlines(self.airlines)
         self.st.write_flights(self.flights)
 
-    def save_all(self)
+    def save_all(self):
         self._maybe_save()
         return{
             "clients": len(self.clients),
