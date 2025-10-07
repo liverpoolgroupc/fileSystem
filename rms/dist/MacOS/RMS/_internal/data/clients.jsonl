@@ -1,0 +1,8 @@
+{"client_id": 3, "Type": "client", "Name": "momo", "Address1": "shibuya", "Address2": "", "Address3": "", "City": "Tokyo", "State": "Tokyo", "Zip": "100210", "Country": "Japan", "Phone": "09066668878"}
+{"client_id": 5, "Type": "client", "Name": "adele", "Address1": "london", "Address2": "", "Address3": "", "City": "London", "State": "london", "Zip": "100210", "Country": "United Kingdom", "Phone": "03033339999"}
+{"client_id": 6, "Type": "client", "Name": "taylorswift", "Address1": "park", "Address2": "", "Address3": "", "City": "New York", "State": "us", "Zip": "312100", "Country": "United States", "Phone": "01088882222"}
+{"client_id": 7, "Type": "client", "Name": "kingwang", "Address1": "nanshan", "Address2": "", "Address3": "", "City": "Beijing", "State": "guangdong", "Zip": "518000", "Country": "China", "Phone": "012088889000"}
+{"client_id": 8, "Type": "client", "Name": "pariskk", "Address1": "paris", "Address2": "", "Address3": "", "City": "Paris", "State": "paris", "Zip": "518000", "Country": "France", "Phone": "03055559980"}
+{"client_id": 9, "Type": "client", "Name": "pepe", "Address1": "angeles", "Address2": "", "Address3": "", "City": "Los Angeles", "State": "LosAngeles", "Zip": "100900", "Country": "United States", "Phone": "11980003"}
+{"client_id": 10, "Type": "client", "Name": "king", "Address1": "aus", "Address2": "", "Address3": "", "City": "Sydney", "State": "sydney", "Zip": "100120", "Country": "Australia", "Phone": "999888777"}
+{"client_id": 11, "Type": "client", "Name": "hahacao", "Address1": "haha", "Address2": "", "Address3": "", "City": "Sofia", "State": "hah", "Zip": "11998", "Country": "Bulgaria", "Phone": "11908087"}
