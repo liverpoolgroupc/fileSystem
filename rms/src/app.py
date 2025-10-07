@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 
-from services import RMS
+from .services import RMS
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,6 +83,8 @@ class App(tk.Tk):
         ttk.Label(form, text="Country*").grid(row=3, column=0, sticky="w", padx=1, pady=4)
         self.cmb_country = ttk.Combobox(form, width=21, values=self.rms.list_countries(), state="readonly")
         self.cmb_country.grid(row=3, column=1, sticky="w", padx=1, pady=4)
+        self.cmb_country.bind("<<ComboboxSelected>>", self.on_client_country_selected)
+
 
         # Row 4: Address Line 1
         ttk.Label(form, text="Address Line 1*").grid(row=4, column=0, sticky="w", padx=1, pady=4)
@@ -103,6 +105,7 @@ class App(tk.Tk):
         ttk.Label(form, text="City*").grid(row=7, column=0, sticky="w", padx=1, pady=4)
         self.cmb_city = ttk.Combobox(form, width=21, values=self.rms.list_cities(), state="readonly")
         self.cmb_city.grid(row=7, column=1, sticky="w", padx=1, pady=4)
+
 
         # Row 8: State/County
         ttk.Label(form, text="State/County*").grid(row=8, column=0, sticky="w", padx=1, pady=4)
@@ -142,6 +145,16 @@ class App(tk.Tk):
             self.tree_clients.column(c, width=w, anchor="w")
         self.tree_clients.pack(fill="both", expand=True, padx=0, pady=8)
         self.tree_clients.bind("<<TreeviewSelect>>", self.on_client_select)
+
+    #country->city
+    def on_client_country_selected(self, _evt=None):
+        country = self.cmb_country.get().strip()
+        cities = self.rms.list_cities_by_country(country)
+        self.cmb_city.configure(values=cities)
+        if cities:
+            self.cmb_city.set(cities[0])
+        else:
+            self.cmb_city.set("")
 
     def _collect_client_form(self) -> dict:
         return dict(
