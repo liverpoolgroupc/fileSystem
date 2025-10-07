@@ -43,6 +43,7 @@ rms
     │   ├── catalogs.py  # Country list (50+) and country→cities map
     │   ├── models.py    # Dataclasses for Client / Airline / Flight
     │   ├── services.py  # Business logic: CRUD / search / validation / dropdowns
+    |   ├── validators.py#Field Normalization & Validation
     │   └── storage.py   # JSONL I/O + schema migration + bundle seeding
     └── tests  #unit test codes
 
@@ -54,6 +55,10 @@ Python 3.10 – 3.13 recommended
 Tkinter (ships with CPython on most systems)
 
 pytest for tests
+
+cd rms
+
+python -m tests.test_rms
 
 4.2 Setup & Run
 cd rms
