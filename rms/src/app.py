@@ -213,6 +213,7 @@ class App(tk.Tk):
             r = self.rms.create_client(data)
             messagebox.showinfo("OK", f"Created client {r['client_id']}")
             self.refresh_clients()
+            self.refresh_flights()
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -339,6 +340,7 @@ class App(tk.Tk):
             r = self.rms.create_airline({"CompanyName": self.ent_company.get().strip()})
             messagebox.showinfo("OK", f"Created airline {r['airline_id']}")
             self.refresh_airlines()
+            self.refresh_flights()
         except Exception as e:
             messagebox.showerror("Error", str(e))
 

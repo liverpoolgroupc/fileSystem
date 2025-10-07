@@ -7,7 +7,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +39,27 @@ def _resource_path(rel: str) -> Path:
         base = Path(__file__).resolve().parent
     return (base / rel).resolve()
 
+
+def _dev_project_data_dir(max_up: int = 5) -> Optional[str]:
+    """
+    When running from source code, starting from the location of storage.py, check in order:
+    The data/ directory in the current folder (usually src/).
+
+    Then the parent folder, grandparent folder, and so on—up to max_up levels—for a data/ directory.
+
+    If a data/ directory is found, return its path; otherwise return None.
+    """
+    here = Path(__file__).resolve().parent
+    candidates = [here] + list(here.parents[:max_up])
+    for base in candidates:
+        cand = base / "data"
+        log.debug("probe data dir: %s", cand)
+        if cand.exists() and cand.is_dir():
+            log.info("Dev mode: use project data dir: %s", cand)
+            return str(cand)
+    return None
+
+
 class JsonlStorage:
     """
     Simple JSONL saving. Provides:
@@ -51,9 +72,20 @@ class JsonlStorage:
         flights: Client_ID/Airline_ID -> client_id/airline_id; generates missing IDs if absent
     """
 
-    def __init__(self, root=None):
-        # If not explicitly provided, use the user's data directory; supports relative paths like "data" as input.
-        self.root = str(Path(root).expanduser().resolve()) if root else _default_data_dir()
+    def __init__(self, root: Optional[str] = None):
+        # Priority order: explicit root > (not frozen and project data/ exists) > user-level directory.
+        if root:
+            self.root = str(Path(root).expanduser().resolve())
+            log.info("JsonlStorage root (explicit): %s", self.root)
+        else:
+            if getattr(sys, "frozen", False):
+                # Packaged mode: always write to the user-level directory.
+                self.root = _default_data_dir()
+            else:
+                # Source mode: if the project’s data/ is found, use it; otherwise use the user-level directory.
+                dev = _dev_project_data_dir()
+                self.root = dev if dev else _default_data_dir()
+
         os.makedirs(self.root, exist_ok=True)
 
         self.clients_path = os.path.join(self.root, "clients.jsonl")
@@ -67,6 +99,9 @@ class JsonlStorage:
 
     # --------------------- Firt Model ---------------------
     def _seed_from_bundle_if_empty(self):
+        if not getattr(sys, "frozen", False):
+            return
+
         need = []
         for name in ("clients.jsonl", "airlines.jsonl", "flights.jsonl"):
             dst = os.path.join(self.root, name)
