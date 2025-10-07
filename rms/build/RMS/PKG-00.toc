@@ -1,0 +1,65 @@
+('E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+ 'Practice\\End Of Module Assignment\\dev\\rms\\build\\RMS\\RMS.pkg',
+ {'BINARY': True,
+  'DATA': True,
+  'EXECUTABLE': True,
+  'EXTENSION': True,
+  'PYMODULE': True,
+  'PYSOURCE': True,
+  'PYZ': False,
+  'SPLASH': True,
+  'SYMLINK': False},
+ [('pyi-contents-directory _internal', '', 'OPTION'),
+  ('PYZ-00.pyz',
+   'E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+   'Practice\\End Of Module Assignment\\dev\\rms\\build\\RMS\\PYZ-00.pyz',
+   'PYZ'),
+  ('struct',
+   'E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+   'Practice\\End Of Module '
+   'Assignment\\dev\\rms\\build\\RMS\\localpycs\\struct.pyc',
+   'PYMODULE'),
+  ('pyimod01_archive',
+   'E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+   'Practice\\End Of Module '
+   'Assignment\\dev\\rms\\build\\RMS\\localpycs\\pyimod01_archive.pyc',
+   'PYMODULE'),
+  ('pyimod02_importers',
+   'E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+   'Practice\\End Of Module '
+   'Assignment\\dev\\rms\\build\\RMS\\localpycs\\pyimod02_importers.pyc',
+   'PYMODULE'),
+  ('pyimod03_ctypes',
+   'E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+   'Practice\\End Of Module '
+   'Assignment\\dev\\rms\\build\\RMS\\localpycs\\pyimod03_ctypes.pyc',
+   'PYMODULE'),
+  ('pyimod04_pywin32',
+   'E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+   'Practice\\End Of Module '
+   'Assignment\\dev\\rms\\build\\RMS\\localpycs\\pyimod04_pywin32.pyc',
+   'PYMODULE'),
+  ('pyiboot01_bootstrap',
+   'E:\\Program '
+   'Files\\Python\\Lib\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
+   'PYSOURCE'),
+  ('pyi_rth_inspect',
+   'E:\\Program '
+   'Files\\Python\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_inspect.py',
+   'PYSOURCE'),
+  ('pyi_rth__tkinter',
+   'E:\\Program '
+   'Files\\Python\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth__tkinter.py',
+   'PYSOURCE'),
+  ('app',
+   'E:\\personal\\MasterLiverpool\\Assesment\\CSCK541 Software Development in '
+   'Practice\\End Of Module Assignment\\dev\\rms\\src\\app.py',
+   'PYSOURCE')],
+ 'python311.dll',
+ True,
+ False,
+ False,
+ [],
+ None,
+ None,
+ None)
