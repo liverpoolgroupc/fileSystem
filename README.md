@@ -47,6 +47,13 @@ rms
     │   └── storage.py   # JSONL I/O + schema migration + bundle seeding
     └── tests  #unit test codes
 
+json data path:
+When running the program in the IDE, the data will be written to the data folder under the project directory.
+When the program is packaged, it will be written to the following directory:
+
+- macOS: ~/Library/Application Support/RMS
+- Windows: %APPDATA%/RMS
+
 4) Getting Started
 4.1 Requirements
 
@@ -77,8 +84,46 @@ python app.py
 5) Run Tests
 
 
+6) Packing
 
-6) Troubleshooting
+6.1 MacOS
+python -m pip install pyinstaller
+
+pyinstaller \
+  --clean --noconfirm \
+  --windowed \
+  --name RMS \
+  --paths rms/src \
+  --add-data "rms/data:data" \
+  rms/src/app.py
+
+6.2 Windows
+
+python -m pip install pyinstaller
+
+run command in the cmd.exe
+
+pyinstaller ^
+  --clean --noconfirm ^
+  --windowed ^
+  --name RMS ^
+  --paths rms\src ^
+  --add-data "rms\data;data" ^
+  rms\src\app.py
+
+run command in the PowerShell
+
+pyinstaller `
+  --clean --noconfirm `
+  --windowed `
+  --name RMS `
+  --paths rms\src `
+  --add-data "rms\data;data" `
+  rms\src\app.py
+
+
+
+7) Troubleshooting
 
 pyinstaller: command not found → python -m pip install pyinstaller
 
