@@ -311,6 +311,20 @@ class RMS:
         log.info("Delete flight %s", flight_id)
 
     # ---------- check flights ----------
+    def search_flights_by_client(self, client_id: int) -> List[Dict]:
+        out: List[Dict] = []
+        for f in self.flights:
+            if int(f.get("client_id", 0)) != int(client_id):
+                continue
+            enr = dict(f)
+            c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
+            a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
+            enr["ClientName"] = c.get("Name", "")
+            enr["Phone"] = c.get("Phone", "")
+            enr["Airline"] = a.get("CompanyName", "")
+            out.append(enr)
+        return out
+
     def search_flights(self, q: str) -> List[Dict]:
         q = (q or "").strip().lower()
         if not q:
@@ -336,4 +350,17 @@ class RMS:
             enr["Airline"] = a.get("CompanyName", "")
             out.append(enr)
         log.info("Search flights q=%s -> %d", q, len(out))
+        return out
+    
+    def search_flights_by_fk(self, client_id: int, airline_id: int) -> List[Dict]:
+        out: List[Dict] = []
+        for f in self.flights:
+            if int(f.get("client_id", 0)) == int(client_id) and int(f.get("airline_id", 0)) == int(airline_id):
+                enr = dict(f)
+                a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
+                c = self._find(self.clients, "client_id", int(f["client_id"])) or {}
+                enr["ClientName"] = c.get("Name", "")
+                enr["Phone"] = c.get("Phone", "")
+                enr["Airline"] = a.get("CompanyName", "")
+                out.append(enr)
         return out
