@@ -5,7 +5,7 @@ from datetime import datetime
 
 from models import Client, Airline, Flight
 from storage import JsonlStorage
-from catalogs import COUNTRY_CATALOG, CITY_CATALOG, COUNTRY_TO_CITIES
+from catalogs import COUNTRY_CATALOG, CITY_CATALOG, COUNTRY_TO_CITIES,COUNTRY_TO_STATES,CITY_TO_STATE
 
 # import validators.py
 from validators import (
@@ -84,6 +84,19 @@ class RMS:
     def list_cities_by_country(self, country: str) -> List[str]:
         return COUNTRY_TO_CITIES.get(country, [])
 
+    # ---list states for ui---
+    def list_states_by_country(self, country: str) -> List[str]:
+        return COUNTRY_TO_STATES.get(country, [])
+
+    # --- city->state country---
+    def get_state_by_city(self, country: str, city: str) -> Optional[str]:
+        return CITY_TO_STATE.get(country, {}).get(city)
+
+    # --- state ->city---
+    def list_cities_by_state(self, country: str, state: str) -> List[str]:
+        mapping = CITY_TO_STATE.get(country, {})
+        return [c for c, st in mapping.items() if st == state]
+
     def list_clients_combo(self) -> List[str]:
         # "client_id - Name (Phone)"
         return [f'{c["client_id"]} - {c.get("Name","")} ({c.get("Phone","")})' for c in self.clients]
@@ -96,6 +109,25 @@ class RMS:
         miss = [k for k in REQUIRED_CLIENT_FIELDS if not str(data.get(k, "")).strip()]
         if miss:
             raise ValueError("Missing required fields: " + ", ".join(miss))
+
+    # ---check city and state valid---
+    def _assert_city_in_state(self, country: str, state: str, city: str):
+        if not country or not state or not city:
+            return
+
+
+        cities = self.list_cities_by_state(country, state)
+        if cities:
+            if city not in cities:
+                raise ValueError(f"City '{city}' is not in state '{state}' of {country}.")
+            return
+
+
+        mapped_state = self.get_state_by_city(country, city)
+        if mapped_state and mapped_state != state:
+            raise ValueError(f"City '{city}' belongs to state '{mapped_state}', not '{state}'.")
+
+
 
     def _clean_and_validate_client(self, data: Dict) -> Dict:
         """
@@ -122,6 +154,11 @@ class RMS:
         if country not in COUNTRY_CATALOG:
             raise ValueError(f"Unknown country: {country}")
 
+        # verify states
+        states = self.list_states_by_country(country)
+        if states and clean["State"] not in states:
+            raise ValueError(f"State '{clean['State']}' is not valid for country '{country}'")
+
         city = validate_city(clean.get("City", ""))
 
         mapped = COUNTRY_TO_CITIES.get(country)
@@ -131,6 +168,9 @@ class RMS:
         else:
             if CITY_CATALOG and city not in CITY_CATALOG:
                 log.warning("City '%s' not found in global CITY_CATALOG; accepted as free text.", city)
+
+        # ---check city and state matching---
+        self._assert_city_in_state(country, clean["State"], city)
 
         clean["Country"] = country
         clean["City"] = city

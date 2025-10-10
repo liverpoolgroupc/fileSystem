@@ -110,11 +110,13 @@ class App(tk.Tk):
         ttk.Label(form, text="City*").grid(row=7, column=0, sticky="w", padx=1, pady=4)
         self.cmb_city = ttk.Combobox(form, width=21, values=self.rms.list_cities(), state="readonly")
         self.cmb_city.grid(row=7, column=1, sticky="w", padx=1, pady=4)
-
+        #automatically infer/refresh the state/province.
+        self.cmb_city.bind("<<ComboboxSelected>>", self.on_client_city_selected)
 
         # Row 8: State/County
         ttk.Label(form, text="State/County*").grid(row=8, column=0, sticky="w", padx=1, pady=4)
-        self.ent_state = ttk.Entry(form, width=22)
+        #self.ent_state = ttk.Entry(form, width=22)
+        self.ent_state = ttk.Combobox(form, width=21, state="readonly", values=[])
         self.ent_state.grid(row=8, column=1, sticky="w", padx=1, pady=4)
 
         # Row 9: ZIP Code/Postcode
@@ -163,10 +165,84 @@ class App(tk.Tk):
         country = self.cmb_country.get().strip()
         cities = self.rms.list_cities_by_country(country)
         self.cmb_city.configure(values=cities)
-        if cities:
-            self.cmb_city.set(cities[0])
+        if self.cmb_city.get() not in cities:
+            self.cmb_city.set(cities[0] if cities else "")
+
+        states = []
+        try:
+            states = self.rms.list_states_by_country(country)
+        except Exception:
+            states = []
+
+        if states:
+            self.ent_state.configure(state="readonly", values=states)
+            if self.ent_state.get() not in states:
+                # If the city can be inferred to the state/province, prioritize the inferred value.
+                st = self._infer_state_by_city(country, self.cmb_city.get().strip())
+                self.ent_state.set(st if st in states else states[0])
         else:
-            self.cmb_city.set("")
+            # not vaule, user can input
+            self.ent_state.configure(state="normal", values=[])
+            if not self.ent_state.get():
+                self.ent_state.set("")
+
+    # —— After selecting a city: Automatically infer and set the state/province, while refreshing the state/province dropdown——
+    def on_client_city_selected(self, _evt=None):
+        country = self.cmb_country.get().strip()
+        city = self.cmb_city.get().strip()
+
+        # update states
+        states = []
+        try:
+            states = self.rms.list_states_by_country(country)
+        except Exception:
+            states = []
+
+        if states:
+            self.ent_state.configure(state="readonly", values=states)
+        else:
+            self.ent_state.configure(state="normal", values=[])
+
+        #
+        st = self._infer_state_by_city(country, city)
+        if st:
+            # Only set when state is in a dropdown list or in free-form input mode.
+            if (states and st in states) or not states:
+                self.ent_state.set(st)
+        else:
+            # uninfer, default
+            if states and self.ent_state.get() not in states:
+                self.ent_state.set(states[0])
+
+    def _infer_state_by_city(self, country: str, city: str):
+        st = None
+        for fn in ("get_state_by_city", "find_state_for_city"):
+            try:
+                f = getattr(self.rms, fn)
+                st = f(country, city)
+                if st:
+                    break
+            except Exception:
+                pass
+        return st
+
+    # Validation: Whether the city belongs to a state or province
+    def _assert_city_in_state(self, country: str, state: str, city: str):
+        try:
+            cities = self.rms.list_cities_by_state(country, state)
+            if cities and city not in cities:
+                raise ValueError(f"City '{city}' is not in state '{state}' of {country}.")
+            if cities:
+                return
+        except Exception:
+            pass
+
+
+        st = self._infer_state_by_city(country, city)
+        if st and state and st != state:
+            raise ValueError(
+                f"City '{city}' belongs to state '{st}', not '{state}'."
+            )
 
     def _collect_client_form(self) -> dict:
         return dict(
