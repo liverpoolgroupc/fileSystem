@@ -113,13 +113,21 @@ pyinstaller ^
 
 run command in the PowerShell
 
-pyinstaller `
+<!-- pyinstaller `
   --clean --noconfirm `
   --windowed `
   --name RMS `
   --paths rms\src `
   --add-data "rms\data;data" `
-  rms\src\app.py
+  rms\src\app.py -->
+
+  pyinstaller `
+  --clean --noconfirm `
+  --windowed `
+  --name RMS `
+  --paths src `
+  --add-data "data;data" `
+  src\app.py
 
 
 
