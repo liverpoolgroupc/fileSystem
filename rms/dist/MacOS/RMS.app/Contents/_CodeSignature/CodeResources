@@ -754,19 +754,7 @@
 		</data>
 		<key>Resources/base_library.zip</key>
 		<data>
-		NUg7ddhNw5W4pEcpFXjE7gjj5mc=
-		</data>
-		<key>Resources/data/airlines.jsonl</key>
-		<data>
-		T5gFCMaORbvyLfUl/LFsGcSdK3w=
-		</data>
-		<key>Resources/data/clients.jsonl</key>
-		<data>
-		uzQKgHfhkVWaRXH4+7tgVvHjVRE=
-		</data>
-		<key>Resources/data/flights.jsonl</key>
-		<data>
-		2jmj7l5rSw0yVb/vlWAYkK/YBwk=
+		IXFKHG5TkstEA+dCIpuJcUlmb0c=
 		</data>
 		<key>Resources/icon-windowed.icns</key>
 		<data>
@@ -841,11 +829,6 @@
 		<dict>
 			<key>symlink</key>
 			<string>../Resources/base_library.zip</string>
-		</dict>
-		<key>Frameworks/data</key>
-		<dict>
-			<key>symlink</key>
-			<string>../Resources/data</string>
 		</dict>
 		<key>Frameworks/libcrypto.3.dylib</key>
 		<dict>
@@ -2550,28 +2533,7 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			saKKaIHQUaBViuqTm7w6HEF94kWPaw8JcdHW9mWBGMo=
-			</data>
-		</dict>
-		<key>Resources/data/airlines.jsonl</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			6ShuTPgKCy0yTBWW5Lrzv8gPhlD1idUZgxPfsELzMZw=
-			</data>
-		</dict>
-		<key>Resources/data/clients.jsonl</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			IF4jZgYylN7HH2s9elTgCb+lEGS60jaFKjBYOh/qy90=
-			</data>
-		</dict>
-		<key>Resources/data/flights.jsonl</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=
+			6vsEobTuou1MslugJ0G3Txf/GGnZSIgD/XWlrZtZ598=
 			</data>
 		</dict>
 		<key>Resources/icon-windowed.icns</key>
