@@ -38,6 +38,13 @@ rms
     │   ├── clients.jsonl    #client record
     │   └── flights.jsonl    #flight record
     ├── docs
+    |
+    |
+    |---dist
+    |    |__MacOS       #MacOS RMS.app
+    |    |
+    |    |__Windows     #Windows RMS.exe
+    |
     ├── src
     │   ├── app.py       # GUI entry (Tkinter)
     │   ├── catalogs.py  # Country list (50+) and country→cities map
