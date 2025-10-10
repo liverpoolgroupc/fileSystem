@@ -151,6 +151,13 @@ class App(tk.Tk):
         self.tree_clients.pack(fill="both", expand=True, padx=0, pady=8)
         self.tree_clients.bind("<<TreeviewSelect>>", self.on_client_select)
 
+    # no match, it  is nofity ui box
+    def notify_if_empty(self, rows, what: str) -> bool:
+        if not rows:
+            messagebox.showinfo("No results", f"No matching {what} found.")
+            return True
+        return False
+
     #country->city
     def on_client_country_selected(self, _evt=None):
         country = self.cmb_country.get().strip()
@@ -250,6 +257,8 @@ class App(tk.Tk):
     def on_client_search(self):
         q = self.ent_client_search.get().strip()
         rows = self.rms.search_clients(q)
+        if self.notify_if_empty(rows, "clients"):
+            return
         self.refresh_clients(rows)
 
     # ==============================================
@@ -610,6 +619,8 @@ class App(tk.Tk):
     def on_flight_search(self):
         q = self.ent_fsearch.get().strip()
         rows = self.rms.search_flights(q)
+        if self.notify_if_empty(rows, "flights"):
+            return
         self.refresh_flights(rows)
 
     def on_flight_search_fk(self):
@@ -619,6 +630,9 @@ class App(tk.Tk):
             messagebox.showerror("Error", "Please pick both Client and Airline")
             return
         rows = self.rms.search_flights_by_fk(cid, aid)
+        if self.notify_if_empty(rows, "flights for the selected client & airline"):
+            self.refresh_flights([])
+            return
         # rows are original flights with enhancements; convert directly to display structure
         disp = [{
             "ID": r["ID"],
