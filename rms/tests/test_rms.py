@@ -131,11 +131,11 @@ class TestRMSClient(unittest.TestCase):
         client_data = {
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"
+            "Country": "Hong Kong",
+            "Phone": "1234567"
         }
         result = self.rms.create_client(client_data)
         
@@ -151,7 +151,7 @@ class TestRMSClient(unittest.TestCase):
     # Test: Create client fails when required fields are missing (raises ValueError)
     def test_create_client_missing_fields(self):
         # Invalid data: missing required fields (Address1, City, Country)
-        invalid_data = {"Name": "Bob", "Phone": "123456"}
+        invalid_data = {"Name": "Bob", "Phone": "1234567"}
         
         # Verify ValueError is raised with correct message
         with self.assertRaises(ValueError) as exc_context:
@@ -168,20 +168,20 @@ class TestRMSClient(unittest.TestCase):
         self.rms.create_client({
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"  # Original phone number
+            "Country": "Hong Kong",
+            "Phone": "1234567"  # Original phone number
         })
         
         # Step 2: Update the client's phone number
-        update_data = {"Phone": "654321"}  # New phone number
+        update_data = {"Phone": "7654321"}  # New phone number
         result = self.rms.update_client(client_id=1, patch=update_data)
         
         # Validate update result
-        self.assertEqual(result["Phone"], "654321", "Client phone number should be updated")
-        self.assertEqual(self.rms.clients[0]["Phone"], "654321", "In-memory client list should sync the update")
+        self.assertEqual(result["Phone"], "7654321", "Client phone number should be updated")
+        self.assertEqual(self.rms.clients[0]["Phone"], "7654321", "In-memory client list should sync the update")
         
         print(f"Test Details: Updated client ID 1 → New phone: {result['Phone']} (expected '654321')")
 
@@ -201,18 +201,18 @@ class TestRMSClient(unittest.TestCase):
         self.rms.create_client({
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"
+            "Country": "Hong Kong",
+            "Phone": "1234567"
         })
         self.rms.create_airline({"CompanyName": "Cathay"})
         self.rms.create_flight({
             "client_id": 1,  # Linked to client ID 1
             "airline_id": 1,
-            "Date": "2024-12-31 23:59",
-            "StartCity": "HK",
+            "Date": "2024-12-31 23:55",
+            "StartCity": "Hong Kong",
             "EndCity": "London"
         })
         
@@ -231,10 +231,10 @@ class TestRMSClient(unittest.TestCase):
         self.rms.create_client({
             "Name": "Alice",
             "Address1": "Street B",
-            "City": "SH",
-            "State": "SH",
+            "City": "Shanghai",
+            "State": "Shanghai",
             "Zip": "456",
-            "Country": "CN",
+            "Country": "China",
             "Phone": "13800138000"
         })
         
@@ -294,17 +294,17 @@ class TestRMSAirline(unittest.TestCase):
         self.rms.create_client({
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"
+            "Country": "Hong Kong",
+            "Phone": "1234567"
         })
         self.rms.create_flight({
             "client_id": 1,
             "airline_id": 1,  # Linked to airline ID 1
-            "Date": "2024-12-31 23:59",
-            "StartCity": "HK",
+            "Date": "2024-12-31 23:55",
+            "StartCity": "Hong Kong",
             "EndCity": "London"
         })
         
@@ -337,11 +337,11 @@ class TestRMSFlight(unittest.TestCase):
         self.rms.create_client({
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"
+            "Country": "Hong Kong",
+            "Phone": "1234567"
         })  # Creates client with ID=1
         self.rms.create_airline({"CompanyName": "Cathay Pacific"})  # Creates airline with ID=1
 
@@ -349,7 +349,7 @@ class TestRMSFlight(unittest.TestCase):
         valid_flight_data = {
             "client_id": 1,       # Exists in clients
             "airline_id": 1,      # Exists in airlines
-            "Date": "2024-12-31 23:59",  # Valid format: YYYY-MM-DD HH:MM
+            "Date": "2024-12-31 23:55",   
             "StartCity": "Hong Kong",
             "EndCity": "London"
         }
@@ -373,11 +373,11 @@ class TestRMSFlight(unittest.TestCase):
         self.rms.create_client({
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"
+            "Country": "Hong Kong",
+            "Phone": "1234567"
         })
         self.rms.create_airline({"CompanyName": "Cathay Pacific"})
 
@@ -385,7 +385,7 @@ class TestRMSFlight(unittest.TestCase):
         invalid_date_data = {
             "client_id": 1,
             "airline_id": 1,
-            "Date": "2024/12/31 23:59",  # Invalid: Should be "YYYY-MM-DD HH:MM"
+            "Date": "2024/12/31 23:55",  # Invalid: Should be "YYYY-MM-DD HH:MM"
             "StartCity": "Hong Kong",
             "EndCity": "London"
         }
@@ -410,7 +410,7 @@ class TestRMSFlight(unittest.TestCase):
         missing_client_data = {
             "client_id": 999,     # Client 999 does not exist
             "airline_id": 1,
-            "Date": "2024-12-31 23:59",
+            "Date": "2024-12-31 23:55",
             "StartCity": "Hong Kong",
             "EndCity": "London"
         }
@@ -431,18 +431,18 @@ class TestRMSFlight(unittest.TestCase):
         self.rms.create_client({
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"
+            "Country": "Hong Kong",
+            "Phone": "1234567"
         })
 
         # Step 2: Define flight with non-existent Airline ID (999)
         missing_airline_data = {
             "client_id": 1,
             "airline_id": 999,    # Airline 999 does not exist
-            "Date": "2024-12-31 23:59",
+            "Date": "2024-12-31 23:55",
             "StartCity": "Hong Kong",
             "EndCity": "London"
         }
@@ -476,7 +476,7 @@ class TestRMSFlight(unittest.TestCase):
         self.rms.create_flight({
             "client_id": 1,
             "airline_id": 1,
-            "Date": "2025-01-01 10:00",
+            "Date": "2024-12-31 23:55",
             "StartCity": "Beijing",
             "EndCity": "New York"
         })
@@ -516,17 +516,17 @@ class TestRMSFlight(unittest.TestCase):
         self.rms.create_client({
             "Name": "Bob",
             "Address1": "Street A",
-            "City": "HK",
-            "State": "HK",
+            "City": "Hong Kong",
+            "State": "Hong Kong",
             "Zip": "123",
-            "Country": "HK",
-            "Phone": "123456"
+            "Country": "Hong Kong",
+            "Phone": "1234567"
         })
         self.rms.create_airline({"CompanyName": "Cathay Pacific"})
         self.rms.create_flight({  # Creates flight ID=1
             "client_id": 1,
             "airline_id": 1,
-            "Date": "2024-12-31 23:59",
+            "Date": "2024-12-31 23:55",
             "StartCity": "Hong Kong",
             "EndCity": "London"
         })
