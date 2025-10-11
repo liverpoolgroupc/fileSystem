@@ -1,0 +1,15 @@
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]   # PEP8
+ignore = ["E203"]       # match Black 
+#ignore = ["E203", "W503"]    
+

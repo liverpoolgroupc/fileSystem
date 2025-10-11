@@ -1,28 +1,42 @@
 # services.py
-from typing import Dict, List, Optional, Tuple
 import logging
 from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 
-from models import Client, Airline, Flight
+from catalogs import (
+    CITY_CATALOG,
+    CITY_TO_STATE,
+    COUNTRY_CATALOG,
+    COUNTRY_TO_CITIES,
+    COUNTRY_TO_STATES,
+)
+from models import Airline, Client, Flight
 from storage import JsonlStorage
-from catalogs import COUNTRY_CATALOG, CITY_CATALOG, COUNTRY_TO_CITIES,COUNTRY_TO_STATES,CITY_TO_STATE
 
 # import validators.py
 from validators import (
-    validate_name,          # -> str
-    validate_phone,         # -> str
-    validate_zip,           # -> str
-    validate_state,         # -> str
-    validate_address,       # -> str
+    validate_address,  # -> str
+    validate_city,  # -> str
     validate_company_name,  # -> str
-    validate_datetime,      # -> str（'YYYY-MM-DD HH:MM'）
-    validate_country,       # -> str（COUNTRY_CATALOG）
-    validate_city           # -> str
+    validate_country,  # -> str（COUNTRY_CATALOG）
+    validate_datetime,  # -> str（'YYYY-MM-DD HH:MM'）
+    validate_name,  # -> str
+    validate_phone,  # -> str
+    validate_state,  # -> str
+    validate_zip,  # -> str
 )
 
 log = logging.getLogger(__name__)
 
-REQUIRED_CLIENT_FIELDS = ("Name", "Address1", "City", "State", "Zip", "Country", "Phone")
+REQUIRED_CLIENT_FIELDS = (
+    "Name",
+    "Address1",
+    "City",
+    "State",
+    "Zip",
+    "Country",
+    "Phone",
+)
 
 
 class RMS:
@@ -52,7 +66,9 @@ class RMS:
                 pass
         return None
 
-    def _index_of(self, rows: List[dict], key: str, val: int) -> Tuple[int, Optional[dict]]:
+    def _index_of(
+        self, rows: List[dict], key: str, val: int
+    ) -> Tuple[int, Optional[dict]]:
         for i, r in enumerate(rows):
             try:
                 if int(r.get(key, -1)) == int(val):
@@ -68,7 +84,7 @@ class RMS:
 
     def save_all(self):
         self._maybe_save()
-        return{
+        return {
             "clients": len(self.clients),
             "airlines": len(self.airlines),
             "flights": len(self.flights),
@@ -99,7 +115,10 @@ class RMS:
 
     def list_clients_combo(self) -> List[str]:
         # "client_id - Name (Phone)"
-        return [f'{c["client_id"]} - {c.get("Name","")} ({c.get("Phone","")})' for c in self.clients]
+        return [
+            f'{c["client_id"]} - {c.get("Name","")} ({c.get("Phone","")})'
+            for c in self.clients
+        ]
 
     def list_airlines_combo(self) -> List[str]:
         return [f'{a["airline_id"]} - {a.get("CompanyName","")}' for a in self.airlines]
@@ -115,24 +134,24 @@ class RMS:
         if not country or not state or not city:
             return
 
-
         cities = self.list_cities_by_state(country, state)
         if cities:
             if city not in cities:
-                raise ValueError(f"City '{city}' is not in state '{state}' of {country}.")
+                raise ValueError(
+                    f"City '{city}' is not in state '{state}' of {country}."
+                )
             return
-
 
         mapped_state = self.get_state_by_city(country, city)
         if mapped_state and mapped_state != state:
-            raise ValueError(f"City '{city}' belongs to state '{mapped_state}', not '{state}'.")
-
-
+            raise ValueError(
+                f"City '{city}' belongs to state '{mapped_state}', not '{state}'."
+            )
 
     def _clean_and_validate_client(self, data: Dict) -> Dict:
         """
         Use validators to clean and validate each field,
-	    and also check that the city matches the selected country.
+            and also check that the city matches the selected country.
         """
         self._validate_client_required(data)
 
@@ -157,17 +176,24 @@ class RMS:
         # verify states
         states = self.list_states_by_country(country)
         if states and clean["State"] not in states:
-            raise ValueError(f"State '{clean['State']}' is not valid for country '{country}'")
+            raise ValueError(
+                f"State '{clean['State']}' is not valid for country '{country}'"
+            )
 
         city = validate_city(clean.get("City", ""))
 
         mapped = COUNTRY_TO_CITIES.get(country)
         if mapped:
             if city not in mapped:
-                raise ValueError(f"City '{city}' is not in country '{country}' allowed city list")
+                raise ValueError(
+                    f"City '{city}' is not in country '{country}' allowed city list"
+                )
         else:
             if CITY_CATALOG and city not in CITY_CATALOG:
-                log.warning("City '%s' not found in global CITY_CATALOG; accepted as free text.", city)
+                log.warning(
+                    "City '%s' not found in global CITY_CATALOG; accepted as free text.",
+                    city,
+                )
 
         # ---check city and state matching---
         self._assert_city_in_state(country, clean["State"], city)
@@ -181,7 +207,9 @@ class RMS:
     def create_client(self, data: Dict) -> Dict:
         clean = self._clean_and_validate_client(data)
         new_id = self._next_id(self.clients, "client_id")
-        c = Client(client_id=new_id, **{k: v for k, v in clean.items() if k != "client_id"})
+        c = Client(
+            client_id=new_id, **{k: v for k, v in clean.items() if k != "client_id"}
+        )
         row = c.to_dict()
         self.clients.append(row)
         self._maybe_save()
@@ -208,7 +236,9 @@ class RMS:
             raise KeyError(f"Client {client_id} not found")
         # delete flight
         self.clients.pop(idx)
-        self.flights = [f for f in self.flights if int(f.get("client_id", 0)) != int(client_id)]
+        self.flights = [
+            f for f in self.flights if int(f.get("client_id", 0)) != int(client_id)
+        ]
         self._maybe_save()
         log.info("Delete client %s", client_id)
 
@@ -219,8 +249,12 @@ class RMS:
         out: List[Dict] = []
         for r in self.clients:
             if q.isdigit() and int(q) == int(r.get("client_id", 0)):
-                out.append(r); continue
-            if q in str(r.get("Phone", "")).lower() or q in str(r.get("Name", "")).lower():
+                out.append(r)
+                continue
+            if (
+                q in str(r.get("Phone", "")).lower()
+                or q in str(r.get("Name", "")).lower()
+            ):
                 out.append(r)
         log.info("Search clients q=%s -> %d", q, len(out))
         return out
@@ -236,7 +270,9 @@ class RMS:
     def create_airline(self, data: Dict) -> Dict:
         clean = self._clean_and_validate_airline(data)
         new_id = self._next_id(self.airlines, "airline_id")
-        a = Airline(airline_id=new_id, **{k: v for k, v in clean.items() if k != "airline_id"})
+        a = Airline(
+            airline_id=new_id, **{k: v for k, v in clean.items() if k != "airline_id"}
+        )
         row = a.to_dict()
         self.airlines.append(row)
         self._maybe_save()
@@ -260,7 +296,9 @@ class RMS:
         if row is None:
             raise KeyError(f"Airline {airline_id} not found")
         self.airlines.pop(idx)
-        self.flights = [f for f in self.flights if int(f.get("airline_id", 0)) != int(airline_id)]
+        self.flights = [
+            f for f in self.flights if int(f.get("airline_id", 0)) != int(airline_id)
+        ]
         self._maybe_save()
         log.info("Delete airline %s", airline_id)
 
@@ -271,7 +309,8 @@ class RMS:
         out: List[Dict] = []
         for r in self.airlines:
             if q.isdigit() and int(q) == int(r.get("airline_id", 0)):
-                out.append(r); continue
+                out.append(r)
+                continue
             if q in str(r.get("CompanyName", "")).lower():
                 out.append(r)
         log.info("Search airlines q=%s -> %d", q, len(out))
@@ -299,10 +338,10 @@ class RMS:
             datetime.strptime(date_str, "%Y-%m-%d %H:%M")
         except Exception:
             raise ValueError("Date must be 'YYYY-MM-DD HH:MM'")
-        #validators
+        # validators
         clean["Date"] = validate_datetime(date_str)
 
-        #check citys valid
+        # check citys valid
         start_city = validate_city(clean.get("StartCity", ""))
         end_city = validate_city(clean.get("EndCity", ""))
 
@@ -373,7 +412,8 @@ class RMS:
         matched = []
         for c in self.clients:
             if q.isdigit() and int(q) == int(c.get("client_id", 0)):
-                matched.append(c); continue
+                matched.append(c)
+                continue
             if q in c.get("Name", "").lower() or q in c.get("Phone", "").lower():
                 matched.append(c)
         ids = {int(c["client_id"]) for c in matched}
@@ -391,11 +431,13 @@ class RMS:
             out.append(enr)
         log.info("Search flights q=%s -> %d", q, len(out))
         return out
-    
+
     def search_flights_by_fk(self, client_id: int, airline_id: int) -> List[Dict]:
         out: List[Dict] = []
         for f in self.flights:
-            if int(f.get("client_id", 0)) == int(client_id) and int(f.get("airline_id", 0)) == int(airline_id):
+            if int(f.get("client_id", 0)) == int(client_id) and int(
+                f.get("airline_id", 0)
+            ) == int(airline_id):
                 enr = dict(f)
                 a = self._find(self.airlines, "airline_id", int(f["airline_id"])) or {}
                 c = self._find(self.clients, "client_id", int(f["client_id"])) or {}

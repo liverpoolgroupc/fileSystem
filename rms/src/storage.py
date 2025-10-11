@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 
 log = logging.getLogger(__name__)
 
+
 def _default_data_dir() -> str:
     """
     Return path when a user saved the file：
@@ -26,7 +27,8 @@ def _default_data_dir() -> str:
         return str(Path(appdata) / "RMS")
     else:
         return str(home / ".local" / "share" / "RMS")
-    
+
+
 def _resource_path(rel: str) -> Path:
     """
     Resource locator compatible with both packaging and development modes:
@@ -35,7 +37,7 @@ def _resource_path(rel: str) -> Path:
       - Source code execution: directory of the current script
     """
     base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
-    if not getattr(sys, "frozen", False):  
+    if not getattr(sys, "frozen", False):
         base = Path(__file__).resolve().parent
     return (base / rel).resolve()
 
@@ -111,7 +113,9 @@ class JsonlStorage:
         if not need:
             return
 
-        bundle_data_dir = _resource_path("data")  # Needed when you package --add-data "data:data" contains
+        bundle_data_dir = _resource_path(
+            "data"
+        )  # Needed when you package --add-data "data:data" contains
         if not bundle_data_dir.exists() or not bundle_data_dir.is_dir():
             # No bundled template? No problem — an empty file will be created during future writes.
             return
@@ -198,8 +202,12 @@ class JsonlStorage:
             self._write_jsonl_atomic(self.airlines_path, airlines)
             self._write_jsonl_atomic(self.flights_path, flights)
 
-        log.info("Loaded: clients=%d airlines=%d flights=%d",
-                 len(clients), len(airlines), len(flights))
+        log.info(
+            "Loaded: clients=%d airlines=%d flights=%d",
+            len(clients),
+            len(airlines),
+            len(flights),
+        )
         return {"clients": clients, "airlines": airlines, "flights": flights}
 
     # --------------------- Write into Json ---------------------
