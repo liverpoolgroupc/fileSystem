@@ -1,36 +1,40 @@
-#fileSystem
+## Record Management System (RMS)
 
-1) Overview
+This README complements the technical documentation by providing practical details on system setup, structure, and execution.
+It outlines the key steps required to install, run, and package the Record Management System (RMS) and serves as a technical reference for reproducing or evaluating the software.
+---
 
-RMS is a small desktop GUI app (Tkinter) for managing three record types:
+## 1. Overview
 
-Clients (customer profiles)
+The Record Management System (RMS) is a desktop application developed in Python using the **Tkinter** library. It is designed to manage three categories of records for a specialist travel agency:
 
-Airlines (carrier list)
+- **Clients** – customer profiles
+- **Airlines** – carrier records
+- **Flights** – links between clients and airlines
 
-Flights (links a client to an airline)
+Data are stored in **JSONL** format (one JSON object per line).
+The application supports full **CRUD** (Create, Read, Update, Delete) functionality with immediate data persistence, foreign-key validation (ensuring flights reference existing clients and airlines), and confirmation dialogues for record creation and deletion. System logs are printed to the console.
 
-Data is stored as JSONL (one JSON per line). The app supports Create / Update / Delete / Search, immediate persistence (save on every change), FK validation (flight must reference existing client & airline), and confirm dialogs for create/delete. Logs are printed to the console.
+## 2. Key Features
 
-2) Key Features
+**Clients**
+- Validation of required fields: *Name, Phone, Country, City, State, ZIP, Address1*
 
-Clients: required fields validation (Name, Phone, Country, City, State, Zip, Address1).
+**Airlines**
+- Basic CRUD functionality with search by *airline_id* or company name
 
-Airlines: simple CRUD with search by airline_id / company name.
+**Flights**
+- Date and time selectors (Year/Month/Day Hour:Minute)
+- Drop-down menus for start and end cities
+- Search by *client_id*, client name, or phone number
 
-Flights: date/time pickers (Y/M/D H:M), city drop-downs, and search by client_id / client name / phone.
+**Additional Features**
+- Country list (50+ entries) sorted alphabetically
+- Cities filtered according to selected country
+- Read-only fields (IDs and Types) displayed in dark grey
+- Automatic migration of legacy schemas (e.g. *ID → client_id / airline_id*)
 
-Drop-downs:
-
-Countries (50+), alphabetically sorted.
-
-Cities filtered by selected country.
-
-Read-only fields (IDs and Types) are displayed in darker gray.
-
-Data files auto-migrate older schemas (e.g., ID → client_id / airline_id).
-
-3) Project Structure
+## 3. Project Structure
 
 rms
     ├── data
@@ -54,27 +58,22 @@ rms
     │   └── storage.py   # JSONL I/O + schema migration + bundle seeding
     └── tests  #unit test codes
 
-json data path:
-When running the program in the IDE, the data will be written to the data folder under the project directory.
-When the program is packaged, it will be written to the following directory:
+**3.1 Data storage path**
+- When run from an IDE, data are written to the local `rms/data` directory.
+- When packaged:
+  - macOS: `~/Library/Application Support/RMS`
+  - Windows: `%APPDATA%/RMS`
 
-- macOS: ~/Library/Application Support/RMS
-- Windows: %APPDATA%/RMS
+---
 
-4) Getting Started
-4.1 Requirements
+## 4. Installation and Execution
 
-Python 3.10 – 3.13 recommended
+** 4.1 Prerequisites
+- Python **3.10 – 3.13**
+- Tkinter (bundled with CPython)
+- `pytest` for unit testing
 
-Tkinter (ships with CPython on most systems)
-
-pytest for tests
-
-cd rms
-
-python -m tests.test_rms
-
-4.2 Setup & Run
+** 4.2 Environment Setup and Execution
 cd rms
 python -m venv .venv
 # macOS / Linux
@@ -87,13 +86,13 @@ python -m pip install pytest
 
 python app.py
 
+## Run Tests
+- cd rms
+- python -m tests.test_rms
 
-5) Run Tests
+## 6 Packing
 
-
-6) Packing
-
-6.1 MacOS
+** 6.1 MacOS
 python -m pip install pyinstaller
 
 pyinstaller \
@@ -104,8 +103,7 @@ pyinstaller \
   --add-data "rms/data:data" \
   rms/src/app.py
 
-6.2 Windows
-
+** 6.2 Windows
 python -m pip install pyinstaller
 
 run command in the cmd.exe
@@ -155,25 +153,36 @@ pyinstaller ^
   --collect-all tkinter ^
   src\app.py
 
+## 7 Troubleshooting
 
-7) Troubleshooting
+- **pyinstaller: command not found** → run `python -m pip install pyinstaller`
+- **No GUI / Tk 8.5 warning on macOS** → use Python 3.10+ that ships with Tk 8.6+
+- **attempted relative import with no known parent package** → imports in `app.py` are absolute (a small `sys.path` shim is included)
+- **Data not updating** → check the effective data root in logs; packaged mode writes to the user directory listed above
 
-pyinstaller: command not found → python -m pip install pyinstaller
-
-No GUI / Tk 8.5 warning on macOS → use Python 3.10+ that ships with Tk 8.6+
-
-attempted relative import with no known parent package → imports in app.py are absolute (a small sys.path shim is included).
-
-Data not updating → check effective data root in logs; packaged mode writes to user directory listed above.
-
-8) !!!!!!!!!!!!!!!!! Important Notes !!!!!!!!!!!!!!!!!!! Alternative Solution when failed to run .exe file in window envoirnment
+## 8 !!!!!!!!!!!!!!!!! Important Notes !!!!!!!!!!!!!!!!!!!
+## Alternative Solution when failed to run .exe file in window envoirnment
 
 1.use terminal to change directory to rms folder
 
 2.use the following command in terminal : python -m src.app
 
-9) Run unit test
+## 9 Run unit test
 
-1 . cd to rms 
+1 . cd to rms
 2. use the following command python -m unittest tests.test_rms
+
+## 10 Project Contributors
+
+This project was developed collaboratively by **Group C** as part of the MSc Software Engineering Programme.
+Team members (in alphabetical order): **Matteo Crotta, Ilona Diomidova, Liu Dushi, Kieran Karuna, and Yeung Ka Chun**.
+
+---
+
+## 11 License
+
+This software was developed for educational purposes as part of the **MSc Data Science and Artificial Intelligence**
+**Module CSCK541 – Software Development in Practice**. It is distributed under the **MIT License**, which permits reuse, modification, and distribution with appropriate attribution.
+
+---
 
