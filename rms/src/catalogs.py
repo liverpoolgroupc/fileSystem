@@ -1,36 +1,110 @@
-from typing import List, Dict
+from typing import Dict, List
 
 # Major countries (official full names, at least 50)
 COUNTRY_CATALOG: List[str] = [
     # North America
-    "United States", "Canada", "Mexico",
+    "United States",
+    "Canada",
+    "Mexico",
     # Sourth America
-    "Brazil", "Argentina", "Chile", "Colombia", "Peru", "Venezuela",
-    "Uruguay", "Paraguay", "Ecuador",
+    "Brazil",
+    "Argentina",
+    "Chile",
+    "Colombia",
+    "Peru",
+    "Venezuela",
+    "Uruguay",
+    "Paraguay",
+    "Ecuador",
     # Europe
-    "United Kingdom", "Ireland", "France", "Germany", "Spain", "Portugal",
-    "Italy", "Netherlands", "Belgium", "Luxembourg", "Switzerland", "Austria",
-    "Monaco", "Liechtenstein",
+    "United Kingdom",
+    "Ireland",
+    "France",
+    "Germany",
+    "Spain",
+    "Portugal",
+    "Italy",
+    "Netherlands",
+    "Belgium",
+    "Luxembourg",
+    "Switzerland",
+    "Austria",
+    "Monaco",
+    "Liechtenstein",
     # Europe
-    "Norway", "Sweden", "Finland", "Denmark", "Iceland",
-    "Poland", "Czechia", "Hungary", "Romania", "Bulgaria", "Slovakia",
-    "Slovenia", "Croatia", "Greece", "Türkiye", "Ukraine",
+    "Norway",
+    "Sweden",
+    "Finland",
+    "Denmark",
+    "Iceland",
+    "Poland",
+    "Czechia",
+    "Hungary",
+    "Romania",
+    "Bulgaria",
+    "Slovakia",
+    "Slovenia",
+    "Croatia",
+    "Greece",
+    "Türkiye",
+    "Ukraine",
     # Middle East
-    "United Arab Emirates", "Saudi Arabia", "Qatar", "Kuwait", "Oman", "Bahrain", "Israel",
+    "United Arab Emirates",
+    "Saudi Arabia",
+    "Qatar",
+    "Kuwait",
+    "Oman",
+    "Bahrain",
+    "Israel",
     # Africa
-    "Egypt", "South Africa", "Nigeria", "Kenya", "Morocco", "Algeria", "Tunisia", "Ethiopia", "Tanzania",
+    "Egypt",
+    "South Africa",
+    "Nigeria",
+    "Kenya",
+    "Morocco",
+    "Algeria",
+    "Tunisia",
+    "Ethiopia",
+    "Tanzania",
     # Asia
-    "China", "Japan", "South Korea", "Hong Kong", "Macao", "Taiwan",
-    "India", "Pakistan", "Bangladesh", "Sri Lanka",
-    "Singapore", "Malaysia", "Thailand", "Vietnam", "Philippines", "Indonesia",
-    "Cambodia", "Laos", "Myanmar", "Mongolia", "Nepal",
+    "China",
+    "Japan",
+    "South Korea",
+    "Hong Kong",
+    "Macao",
+    "Taiwan",
+    "India",
+    "Pakistan",
+    "Bangladesh",
+    "Sri Lanka",
+    "Singapore",
+    "Malaysia",
+    "Thailand",
+    "Vietnam",
+    "Philippines",
+    "Indonesia",
+    "Cambodia",
+    "Laos",
+    "Myanmar",
+    "Mongolia",
+    "Nepal",
     # Oceania
-    "Australia", "New Zealand",
+    "Australia",
+    "New Zealand",
 ]
 
 # Country → Major Cities mapping (extensible)
 COUNTRY_TO_CITIES: Dict[str, List[str]] = {
-    "United States": ["New York", "Los Angeles", "San Francisco", "Seattle", "Chicago", "Boston", "Houston", "Miami"],
+    "United States": [
+        "New York",
+        "Los Angeles",
+        "San Francisco",
+        "Seattle",
+        "Chicago",
+        "Boston",
+        "Houston",
+        "Miami",
+    ],
     "Canada": ["Toronto", "Vancouver", "Montreal", "Ottawa"],
     "Mexico": ["Mexico City", "Guadalajara", "Monterrey"],
     "Brazil": ["São Paulo", "Rio de Janeiro", "Brasília"],
@@ -42,7 +116,6 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "Uruguay": ["Montevideo"],
     "Paraguay": ["Asunción"],
     "Ecuador": ["Quito", "Guayaquil"],
-
     "United Kingdom": ["London", "Manchester", "Birmingham", "Edinburgh"],
     "Ireland": ["Dublin", "Cork"],
     "France": ["Paris", "Lyon", "Marseille"],
@@ -57,7 +130,6 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "Austria": ["Vienna", "Salzburg"],
     "Monaco": ["Monaco"],
     "Liechtenstein": ["Vaduz"],
-
     "Norway": ["Oslo", "Bergen"],
     "Sweden": ["Stockholm", "Gothenburg"],
     "Finland": ["Helsinki", "Tampere"],
@@ -74,7 +146,6 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "Greece": ["Athens", "Thessaloniki"],
     "Türkiye": ["Istanbul", "Ankara", "Izmir"],
     "Ukraine": ["Kyiv", "Lviv"],
-
     "United Arab Emirates": ["Dubai", "Abu Dhabi"],
     "Saudi Arabia": ["Riyadh", "Jeddah", "Dammam"],
     "Qatar": ["Doha"],
@@ -82,7 +153,6 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "Oman": ["Muscat"],
     "Bahrain": ["Manama"],
     "Israel": ["Tel Aviv", "Jerusalem", "Haifa"],
-
     "Egypt": ["Cairo", "Alexandria", "Giza"],
     "South Africa": ["Johannesburg", "Cape Town", "Durban"],
     "Nigeria": ["Lagos", "Abuja"],
@@ -92,8 +162,15 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "Tunisia": ["Tunis", "Sfax"],
     "Ethiopia": ["Addis Ababa", "Dire Dawa"],
     "Tanzania": ["Dar es Salaam", "Arusha"],
-
-    "China": ["Beijing", "Shanghai", "Shenzhen", "Guangzhou", "Chengdu", "Hangzhou", "Wuhan"],
+    "China": [
+        "Beijing",
+        "Shanghai",
+        "Shenzhen",
+        "Guangzhou",
+        "Chengdu",
+        "Hangzhou",
+        "Wuhan",
+    ],
     "Japan": ["Tokyo", "Osaka", "Nagoya", "Fukuoka", "Sapporo"],
     "South Korea": ["Seoul", "Busan", "Incheon"],
     "Hong Kong": ["Hong Kong"],
@@ -114,7 +191,6 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
     "Myanmar": ["Yangon", "Mandalay"],
     "Mongolia": ["Ulaanbaatar"],
     "Nepal": ["Kathmandu", "Pokhara"],
-
     "Australia": ["Sydney", "Melbourne", "Brisbane"],
     "New Zealand": ["Auckland", "Wellington", "Christchurch"],
 }
@@ -127,11 +203,16 @@ COUNTRY_TO_CITIES: Dict[str, List[str]] = {
 COUNTRY_TO_STATES: Dict[str, List[str]] = {
     # North America
     "United States": [
-        "New York", "California", "Washington", "Illinois", "Massachusetts", "Texas", "Florida"
+        "New York",
+        "California",
+        "Washington",
+        "Illinois",
+        "Massachusetts",
+        "Texas",
+        "Florida",
     ],
     "Canada": ["Ontario", "British Columbia", "Quebec"],
     "Mexico": ["Mexico City (CDMX)", "Jalisco", "Nuevo León"],
-
     # South America
     "Brazil": ["São Paulo", "Rio de Janeiro", "Distrito Federal"],
     "Argentina": ["Buenos Aires", "Córdoba", "Santa Fe"],
@@ -142,7 +223,6 @@ COUNTRY_TO_STATES: Dict[str, List[str]] = {
     "Uruguay": ["Montevideo Department"],
     "Paraguay": ["Asunción (Capital District)"],
     "Ecuador": ["Pichincha", "Guayas"],
-
     # Western Europe
     "United Kingdom": ["England", "Scotland"],
     "Ireland": ["County Dublin", "County Cork"],
@@ -158,7 +238,6 @@ COUNTRY_TO_STATES: Dict[str, List[str]] = {
     "Austria": ["Vienna", "Salzburg"],
     "Monaco": ["Monaco"],
     "Liechtenstein": ["Vaduz"],
-
     # Central/Eastern/Northern Europe
     "Norway": ["Oslo", "Vestland"],
     "Sweden": ["Stockholm County", "Västra Götaland County"],
@@ -176,7 +255,6 @@ COUNTRY_TO_STATES: Dict[str, List[str]] = {
     "Greece": ["Attica", "Central Macedonia"],
     "Türkiye": ["Istanbul", "Ankara", "Izmir"],
     "Ukraine": ["Kyiv City", "Lviv Oblast"],
-
     # Middle East
     "United Arab Emirates": ["Dubai", "Abu Dhabi"],
     "Saudi Arabia": ["Riyadh Province", "Makkah Province", "Eastern Province"],
@@ -185,7 +263,6 @@ COUNTRY_TO_STATES: Dict[str, List[str]] = {
     "Oman": ["Muscat"],
     "Bahrain": ["Capital Governorate"],
     "Israel": ["Tel Aviv District", "Jerusalem District", "Haifa District"],
-
     # Africa
     "Egypt": ["Cairo Governorate", "Alexandria Governorate", "Giza Governorate"],
     "South Africa": ["Gauteng", "Western Cape", "KwaZulu-Natal"],
@@ -196,7 +273,6 @@ COUNTRY_TO_STATES: Dict[str, List[str]] = {
     "Tunisia": ["Tunis Governorate", "Sfax Governorate"],
     "Ethiopia": ["Addis Ababa", "Dire Dawa"],
     "Tanzania": ["Dar es Salaam Region", "Arusha Region"],
-
     # Asia
     "China": ["Beijing", "Shanghai", "Guangdong", "Sichuan", "Zhejiang", "Hubei"],
     "Japan": ["Tokyo", "Osaka", "Aichi", "Fukuoka", "Hokkaido"],
@@ -219,7 +295,6 @@ COUNTRY_TO_STATES: Dict[str, List[str]] = {
     "Myanmar": ["Yangon Region", "Mandalay Region"],
     "Mongolia": ["Ulaanbaatar"],
     "Nepal": ["Bagmati Province", "Gandaki Province"],
-
     # Oceania
     "Australia": ["New South Wales", "Victoria", "Queensland"],
     "New Zealand": ["Auckland Region", "Wellington Region", "Canterbury Region"],
@@ -250,7 +325,6 @@ CITY_TO_STATE: Dict[str, Dict[str, str]] = {
         "Guadalajara": "Jalisco",
         "Monterrey": "Nuevo León",
     },
-
     "Brazil": {
         "São Paulo": "São Paulo",
         "Rio de Janeiro": "Rio de Janeiro",
@@ -288,7 +362,6 @@ CITY_TO_STATE: Dict[str, Dict[str, str]] = {
         "Quito": "Pichincha",
         "Guayaquil": "Guayas",
     },
-
     "United Kingdom": {
         "London": "England",
         "Manchester": "England",
@@ -349,11 +422,13 @@ CITY_TO_STATE: Dict[str, Dict[str, str]] = {
     },
     "Monaco": {"Monaco": "Monaco"},
     "Liechtenstein": {"Vaduz": "Vaduz"},
-
     "Norway": {"Oslo": "Oslo", "Bergen": "Vestland"},
     "Sweden": {"Stockholm": "Stockholm County", "Gothenburg": "Västra Götaland County"},
     "Finland": {"Helsinki": "Uusimaa", "Tampere": "Pirkanmaa"},
-    "Denmark": {"Copenhagen": "Capital Region of Denmark", "Aarhus": "Central Denmark Region"},
+    "Denmark": {
+        "Copenhagen": "Capital Region of Denmark",
+        "Aarhus": "Central Denmark Region",
+    },
     "Iceland": {"Reykjavik": "Capital Region"},
     "Poland": {"Warsaw": "Masovian", "Krakow": "Lesser Poland", "Gdansk": "Pomeranian"},
     "Czechia": {"Prague": "Prague", "Brno": "South Moravian"},
@@ -366,25 +441,42 @@ CITY_TO_STATE: Dict[str, Dict[str, str]] = {
     "Greece": {"Athens": "Attica", "Thessaloniki": "Central Macedonia"},
     "Türkiye": {"Istanbul": "Istanbul", "Ankara": "Ankara", "Izmir": "Izmir"},
     "Ukraine": {"Kyiv": "Kyiv City", "Lviv": "Lviv Oblast"},
-
     "United Arab Emirates": {"Dubai": "Dubai", "Abu Dhabi": "Abu Dhabi"},
-    "Saudi Arabia": {"Riyadh": "Riyadh Province", "Jeddah": "Makkah Province", "Dammam": "Eastern Province"},
+    "Saudi Arabia": {
+        "Riyadh": "Riyadh Province",
+        "Jeddah": "Makkah Province",
+        "Dammam": "Eastern Province",
+    },
     "Qatar": {"Doha": "Doha"},
     "Kuwait": {"Kuwait City": "Al Asimah (Capital)"},
     "Oman": {"Muscat": "Muscat"},
     "Bahrain": {"Manama": "Capital Governorate"},
-    "Israel": {"Tel Aviv": "Tel Aviv District", "Jerusalem": "Jerusalem District", "Haifa": "Haifa District"},
-
-    "Egypt": {"Cairo": "Cairo Governorate", "Alexandria": "Alexandria Governorate", "Giza": "Giza Governorate"},
-    "South Africa": {"Johannesburg": "Gauteng", "Cape Town": "Western Cape", "Durban": "KwaZulu-Natal"},
+    "Israel": {
+        "Tel Aviv": "Tel Aviv District",
+        "Jerusalem": "Jerusalem District",
+        "Haifa": "Haifa District",
+    },
+    "Egypt": {
+        "Cairo": "Cairo Governorate",
+        "Alexandria": "Alexandria Governorate",
+        "Giza": "Giza Governorate",
+    },
+    "South Africa": {
+        "Johannesburg": "Gauteng",
+        "Cape Town": "Western Cape",
+        "Durban": "KwaZulu-Natal",
+    },
     "Nigeria": {"Lagos": "Lagos", "Abuja": "Federal Capital Territory"},
     "Kenya": {"Nairobi": "Nairobi County", "Mombasa": "Mombasa County"},
-    "Morocco": {"Casablanca": "Casablanca-Settat", "Rabat": "Rabat-Salé-Kénitra", "Marrakesh": "Marrakech-Safi"},
+    "Morocco": {
+        "Casablanca": "Casablanca-Settat",
+        "Rabat": "Rabat-Salé-Kénitra",
+        "Marrakesh": "Marrakech-Safi",
+    },
     "Algeria": {"Algiers": "Algiers Province", "Oran": "Oran Province"},
     "Tunisia": {"Tunis": "Tunis Governorate", "Sfax": "Sfax Governorate"},
     "Ethiopia": {"Addis Ababa": "Addis Ababa", "Dire Dawa": "Dire Dawa"},
     "Tanzania": {"Dar es Salaam": "Dar es Salaam Region", "Arusha": "Arusha Region"},
-
     "China": {
         "Beijing": "Beijing",
         "Shanghai": "Shanghai",
@@ -408,7 +500,11 @@ CITY_TO_STATE: Dict[str, Dict[str, str]] = {
     },
     "Hong Kong": {"Hong Kong": "Hong Kong"},
     "Macao": {"Macao": "Macao"},
-    "Taiwan": {"Taipei": "Taipei City", "Taichung": "Taichung City", "Kaohsiung": "Kaohsiung City"},
+    "Taiwan": {
+        "Taipei": "Taipei City",
+        "Taichung": "Taichung City",
+        "Kaohsiung": "Kaohsiung City",
+    },
     "India": {
         "New Delhi": "Delhi (NCT)",
         "Mumbai": "Maharashtra",
@@ -423,22 +519,47 @@ CITY_TO_STATE: Dict[str, Dict[str, str]] = {
     "Bangladesh": {"Dhaka": "Dhaka Division", "Chittagong": "Chittagong Division"},
     "Sri Lanka": {"Colombo": "Western Province", "Kandy": "Central Province"},
     "Singapore": {"Singapore": "Singapore"},
-    "Malaysia": {"Kuala Lumpur": "Kuala Lumpur Federal Territory", "Penang": "Penang", "Johor Bahru": "Johor"},
+    "Malaysia": {
+        "Kuala Lumpur": "Kuala Lumpur Federal Territory",
+        "Penang": "Penang",
+        "Johor Bahru": "Johor",
+    },
     "Thailand": {"Bangkok": "Bangkok", "Chiang Mai": "Chiang Mai", "Phuket": "Phuket"},
-    "Vietnam": {"Hanoi": "Hanoi", "Ho Chi Minh City": "Ho Chi Minh City", "Da Nang": "Da Nang"},
-    "Philippines": {"Manila": "Metro Manila (NCR)", "Cebu": "Cebu Province", "Davao": "Davao Region"},
-    "Indonesia": {"Jakarta": "Jakarta (DKI)", "Surabaya": "East Java", "Bali": "Bali Province"},
+    "Vietnam": {
+        "Hanoi": "Hanoi",
+        "Ho Chi Minh City": "Ho Chi Minh City",
+        "Da Nang": "Da Nang",
+    },
+    "Philippines": {
+        "Manila": "Metro Manila (NCR)",
+        "Cebu": "Cebu Province",
+        "Davao": "Davao Region",
+    },
+    "Indonesia": {
+        "Jakarta": "Jakarta (DKI)",
+        "Surabaya": "East Java",
+        "Bali": "Bali Province",
+    },
     "Cambodia": {"Phnom Penh": "Phnom Penh", "Siem Reap": "Siem Reap Province"},
-    "Laos": {"Vientiane": "Vientiane Prefecture", "Luang Prabang": "Luang Prabang Province"},
+    "Laos": {
+        "Vientiane": "Vientiane Prefecture",
+        "Luang Prabang": "Luang Prabang Province",
+    },
     "Myanmar": {"Yangon": "Yangon Region", "Mandalay": "Mandalay Region"},
     "Mongolia": {"Ulaanbaatar": "Ulaanbaatar"},
     "Nepal": {"Kathmandu": "Bagmati Province", "Pokhara": "Gandaki Province"},
-
-    "Australia": {"Sydney": "New South Wales", "Melbourne": "Victoria", "Brisbane": "Queensland"},
-    "New Zealand": {"Auckland": "Auckland Region", "Wellington": "Wellington Region", "Christchurch": "Canterbury Region"},
+    "Australia": {
+        "Sydney": "New South Wales",
+        "Melbourne": "Victoria",
+        "Brisbane": "Queensland",
+    },
+    "New Zealand": {
+        "Auckland": "Auckland Region",
+        "Wellington": "Wellington Region",
+        "Christchurch": "Canterbury Region",
+    },
 }
 
 
 # Global Popular Cities List
-CITY_CATALOG: List[str] = sorted(
-    {c for lst in COUNTRY_TO_CITIES.values() for c in lst})
+CITY_CATALOG: List[str] = sorted({c for lst in COUNTRY_TO_CITIES.values() for c in lst})
