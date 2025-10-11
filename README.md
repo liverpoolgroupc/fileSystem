@@ -172,3 +172,8 @@ Data not updating → check effective data root in logs; packaged mode writes to
 
 2.use the following command in terminal : python -m src.app
 
+9) Run unit test
+
+1 . cd to rms 
+2. use the following command python -m unittest tests.test_rms
+
