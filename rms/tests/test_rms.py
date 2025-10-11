@@ -5,6 +5,12 @@ from pathlib import Path
 # Ensures consistency even if the script is run from a different working directory
 current_file = Path(__file__).resolve()
 
+root_dir = current_file.parent.parent
+src_dir = root_dir / "src"
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+if str(root_dir) not in sys.path:
+    sys.path.insert(0, str(root_dir))
 # Navigate up two directory levels to get the parent directory of the "tests" folder
 # Example: If current_file is "rms/tests/test_rms.py", rms_dir becomes "rms/"
 # This points to the directory containing the "services.py" module needed for import
