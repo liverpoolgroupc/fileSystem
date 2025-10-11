@@ -110,13 +110,13 @@ python -m pip install pyinstaller
 
 run command in the cmd.exe
 
-pyinstaller ^
+<!-- pyinstaller ^
   --clean --noconfirm ^
   --windowed ^
   --name RMS ^
   --paths rms\src ^
   --add-data "rms\data;data" ^
-  rms\src\app.py
+  rms\src\app.py -->
 
 run command in the PowerShell
 
@@ -128,14 +128,32 @@ run command in the PowerShell
   --add-data "rms\data;data" `
   rms\src\app.py -->
 
-  pyinstaller `
+  <!-- pyinstaller `
   --clean --noconfirm `
   --windowed `
   --name RMS `
   --paths src `
   --add-data "data;data" `
-  src\app.py
+  src\app.py -->
 
+Window build script :
+
+pyinstaller ^
+  --clean --noconfirm ^
+  --onefile ^
+  --name RMS ^
+  --windowed ^
+  --paths src ^
+  --hidden-import services ^
+  --hidden-import models ^
+  --hidden-import storage ^
+  --hidden-import catalogs ^
+  --hidden-import validators ^
+  --add-data "data;data" ^
+  --hidden-import=tkinter ^
+  --hidden-import=_tkinter ^
+  --collect-all tkinter ^
+  src\app.py
 
 
 7) Troubleshooting
@@ -147,3 +165,10 @@ No GUI / Tk 8.5 warning on macOS → use Python 3.10+ that ships with Tk 8.6+
 attempted relative import with no known parent package → imports in app.py are absolute (a small sys.path shim is included).
 
 Data not updating → check effective data root in logs; packaged mode writes to user directory listed above.
+
+8) !!!!!!!!!!!!!!!!! Important Notes !!!!!!!!!!!!!!!!!!! Alternative Solution when failed to run .exe file in window envoirnment
+
+1.use terminal to change directory to rms folder
+
+2.use the following command in terminal : python -m src.app
+
